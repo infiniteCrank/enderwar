@@ -248,14 +248,27 @@ function animate() {
             }
         }
 
+        // Check distances and stop ships if they are within 80 units of each other
+        for (const playerShip of spaceships) {
+            for (const enemyShip of enemies) {
+                const distance = playerShip.spaceship.position.distanceTo(enemyShip.enemyShip.position);
+                
+                if (distance < 80) {
+                    // Stop both ships if they are too close
+                    playerShip.spaceship.userData.velocity.set(0, 0, 0);
+                    enemyShip.enemyShip.userData.velocity.set(0, 0, 0);
+                }
+            }
+        }
+
         // Collision handling for player and enemy ships both ships should get destroyed 
         for (const playerShip of spaceships) {
             for (const enemyShip of enemies) {
                 if (checkCollision(playerShip.spaceship, enemyShip.enemyShip)) {
                     enemyShip.enemyShip.userData.health -= 1; // Enemy takes damage
                     if (enemyShip.enemyShip.userData.health <= 0) {
-                        scene.remove(playerShip.enemyShip.userData.healthBar)
-                        scene.remove(playerShip.enemyShip);
+                        scene.remove(playerShip.spaceship.userData.healthBar)
+                        scene.remove(playerShip.spaceship);
 
                         scene.remove(enemyShip.enemyShip.userData.healthBar)
                         scene.remove(enemyShip.enemyShip);
