@@ -35,13 +35,12 @@ world.gravity.set(0, 0, -9.82); // Gravity
 // Array to hold created spaceships
 let spaceships = [];
 
-// Function to create a spaceship
+// Modify the spaceship creation functions to include health
 function createSpaceship(position) {
-    const shipGeometry = new THREE.BoxGeometry(40, 40, 40); // Size of the spaceship
+    const shipGeometry = new THREE.BoxGeometry(40, 40, 40);
     const shipMaterial = new THREE.MeshPhongMaterial({ color: 0xff00ff });
-
     const spaceship = new THREE.Mesh(shipGeometry, shipMaterial);
-    spaceship.position.set(position.x, position.y + 5, position.z); // Raise it higher
+    spaceship.position.set(position.x, position.y + 5, position.z);
     scene.add(spaceship);
 
     const shipShape = new CANNON.Box(new CANNON.Vec3(40, 40, 40));
@@ -50,24 +49,24 @@ function createSpaceship(position) {
     shipBody.position.set(position.x, position.y + 100, position.z);
     world.addBody(shipBody);
 
-    // Initialize userData to store velocity
+    // Initialize userData to store health and velocity
     spaceship.userData = {
-        velocity: new THREE.Vector3(0, 0, 0), // Initialize velocity as a Vector3
-        playerShip: true
+        health: 10, // Health
+        velocity: new THREE.Vector3(0, 0, 0),
+        playerShip: true,
+        healthBar: createHealthBar(10) // Create health bar
     };
-
-    spaceships.push({spaceship,shipBody}); // Add spaceship to the array
-
-    return spaceship; // Return the spaceship for further manipulation if needed
+    
+    spaceships.push({spaceship, shipBody}); 
+    return spaceship;
 }
 
 // Array to hold created spaceships
 let enemies = [];
 // Function to create an enemy spaceship
 function createEnemyShip(position) {
-    const enemyShipGeometry = new THREE.BoxGeometry(40, 40, 40); // Size of the enemy spaceship
-    const enemyShipMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 }); // Green material for enemy ships
-
+    const enemyShipGeometry = new THREE.BoxGeometry(40, 40, 40);
+    const enemyShipMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
     const enemyShip = new THREE.Mesh(enemyShipGeometry, enemyShipMaterial);
     enemyShip.position.set(position.x, position.y, position.z);
     scene.add(enemyShip);
@@ -77,12 +76,15 @@ function createEnemyShip(position) {
     enemyShipBody.addShape(enemyShipShape);
     enemyShipBody.position.set(position.x, position.y + 100, position.z);
     world.addBody(enemyShipBody);
-    enemyShip.userData = {
-        isEnemyShip: true
-    }
-    enemies.push({enemyShip,enemyShipBody}); // Add spaceship to the array
 
-    return enemyShip; // Return the enemy spaceship
+    enemyShip.userData = {
+        health: 10, // Health
+        velocity: new THREE.Vector3(0, 0, 0),
+        healthBar: createHealthBar(10) // Create health bar
+    };
+    
+    enemies.push({enemyShip, enemyShipBody});
+    return enemyShip;
 }
 
 // Create the enemy gate at the south pole
@@ -200,38 +202,61 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Update the animate function for collision detection
 function animate() {
     requestAnimationFrame(animate);
 
     if (simulationActive) {
         // Update positions and physics
         for (const spaceshipData of spaceships) {
-            var spaceship = spaceshipData.spaceship
-            // Check if userData and velocity are defined
+            const spaceship = spaceshipData.spaceship;
             if (spaceship.userData && spaceship.userData.velocity) {
-                // Move spaceship according to the assigned velocity
-                spaceship.position.add(spaceship.userData.velocity); // Update position
+                spaceship.position.add(spaceship.userData.velocity);
+
+                // Update health bar position and scale
+                spaceship.userData.healthBar.position.set(spaceship.position.x, spaceship.position.y + 30, spaceship.position.z);
+                spaceship.userData.healthBar.scale.x = spaceship.userData.health; // Set width based on health
             }
 
-            // Check collision with the gate
+            // Collision check with the enemy gate
             if (checkCollision(spaceship, enemyGate)) {
-                alert("You win!"); // Notify the player of the win
-                resetGame(); // Reset the game
-                return; // Exit the animate function early after reset
+                alert("You win!");
+                resetGame();
+                return;
             }
         }
 
         for (const enemyData of enemies){
-            var enemyShip = enemyData.enemyShip
-            if(enemyShip.userData && enemyShip.userData.velocity){
-                enemyShip.position.add(enemyShip.userData.velocity)
+            const enemyShip = enemyData.enemyShip;
+            if (enemyShip.userData && enemyShip.userData.velocity) {
+                enemyShip.position.add(enemyShip.userData.velocity);
+                
+                // Update health bar position and scale
+                enemyShip.userData.healthBar.position.set(enemyShip.position.x, enemyShip.position.y + 30, enemyShip.position.z);
+                enemyShip.userData.healthBar.scale.x = enemyShip.userData.health; // Set width based on health
             }
+
             // Check for enemy ship collisions with the player gate
             if (checkCollision(enemyShip, playerGate)) {
-                alert("You lose!"); // Notify the player of the win
-                resetGame(); // Reset the game
-                return; // Exit the animate function early after reset
+                alert("You lose!");
+                resetGame();
+                return;
+            }
+        }
+
+        // Here you can add logic to handle taking damage and health reduction
+        // Example: Check for collision between player and enemy ships
+        for (const playerShip of spaceships) {
+            for (const enemyShip of enemies) {
+                if (checkCollision(playerShip.spaceship, enemyShip.enemyShip)) {
+                    // Assume a collision means the enemy ship takes damage
+                    enemyShip.enemyShip.userData.health -= 1; // Or whatever damage you wish to apply
+                    if (enemyShip.enemyShip.userData.health <= 0) {
+                        // Handle enemy ship destruction
+                        enemyShip.healthBar.visible = false; // Hide health bar
+                        scene.remove(enemyShip.enemyShip);
+                        enemies.splice(enemies.indexOf(enemyShip), 1); // Remove enemy ship from array
+                    }
+                }
             }
         }
 
@@ -242,28 +267,26 @@ function animate() {
     // Render scene
     renderer.render(scene, camera);
 }
-
-
 animate();
 
-// Add this function to reset the game
+// Reset game function to clear out health bars and ships
 function resetGame() {
-
-    // Reset the enemies
+    // Reset player ships
     spaceships.forEach(spaceshipData => {
-        var spaceship = spaceshipData.spaceship
+        const spaceship = spaceshipData.spaceship;
         scene.remove(spaceship);
+        spaceship.userData.healthBar.visible = false; // Hide health bar when reset
     });
     spaceships = [];
 
-    // Reset spaceship array
+    // Reset enemy ships
     enemies.forEach(enemyData => {
-        var enemyShip = enemyData.enemyShip
+        const enemyShip = enemyData.enemyShip;
         scene.remove(enemyShip);
+        enemyShip.userData.healthBar.visible = false; // Hide health bar when reset
     });
-    spaceships = [];
-    
-    // Reset any other necessary state
+    enemies = [];
+
     simulationActive = false;
 }
 
@@ -302,4 +325,18 @@ function spawnEnemyShips() {
         } 
         // If the distance is less than or equal to 200 units, a new position will be tried in the next iteration
     }
+}
+
+// Function to create health bar
+function createHealthBar(health) {
+    const healthBarGeometry = new THREE.PlaneGeometry(40, 5);
+    const healthBarMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const healthBar = new THREE.Mesh(healthBarGeometry, healthBarMaterial);
+
+    // Set the initial health bar scale
+    healthBar.scale.x = health; // Scale according to health value
+    healthBar.position.y += 30; // Position it above the ship
+
+    scene.add(healthBar);
+    return healthBar;
 }
