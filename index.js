@@ -43,7 +43,6 @@ function createSpaceship(position) {
     const spaceship = new THREE.Mesh(shipGeometry, shipMaterial);
     spaceship.position.set(position.x, position.y + 5, position.z); // Raise it higher
     scene.add(spaceship);
-    spaceships.push(spaceship); // Add spaceship to the array
 
     const shipShape = new CANNON.Box(new CANNON.Vec3(40, 40, 40));
     const shipBody = new CANNON.Body({ mass: 1 });
@@ -53,10 +52,37 @@ function createSpaceship(position) {
 
     // Initialize userData to store velocity
     spaceship.userData = {
-        velocity: new THREE.Vector3(0, 0, 0) // Initialize velocity as a Vector3
+        velocity: new THREE.Vector3(0, 0, 0), // Initialize velocity as a Vector3
+        playerShip: true
     };
 
+    spaceships.push({spaceship,shipBody}); // Add spaceship to the array
+
     return spaceship; // Return the spaceship for further manipulation if needed
+}
+
+// Array to hold created spaceships
+let enemies = [];
+// Function to create an enemy spaceship
+function createEnemyShip(position) {
+    const enemyShipGeometry = new THREE.BoxGeometry(40, 40, 40); // Size of the enemy spaceship
+    const enemyShipMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 }); // Green material for enemy ships
+
+    const enemyShip = new THREE.Mesh(enemyShipGeometry, enemyShipMaterial);
+    enemyShip.position.set(position.x, position.y, position.z);
+    scene.add(enemyShip);
+
+    const enemyShipShape = new CANNON.Box(new CANNON.Vec3(40, 40, 40));
+    const enemyShipBody = new CANNON.Body({ mass: 1 });
+    enemyShipBody.addShape(enemyShipShape);
+    enemyShipBody.position.set(position.x, position.y + 100, position.z);
+    world.addBody(enemyShipBody);
+    enemyShip.userData = {
+        isEnemyShip: true
+    }
+    enemies.push({enemyShip,enemyShipBody}); // Add spaceship to the array
+
+    return enemyShip; // Return the enemy spaceship
 }
 
 // Create the enemy gate at the south pole
@@ -65,6 +91,13 @@ const gateMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 }); // Red ma
 const enemyGate = new THREE.Mesh(gateGeometry, gateMaterial);
 enemyGate.position.set(0, -500, 0); // Position the gate at the south pole
 scene.add(enemyGate);
+
+// Create the player gate at the north pole
+const playerGateGeometry = new THREE.BoxGeometry(100, 200, 100); // Size of the player gate
+const playerGateMaterial = new THREE.MeshPhongMaterial({ color: 0x0000ff }); // Blue material for player gate
+const playerGate = new THREE.Mesh(playerGateGeometry, playerGateMaterial);
+playerGate.position.set(0, 500, 0); // Position the player gate at the north pole
+scene.add(playerGate);
 
 // Set camera position
 camera.position.set(0, 50, 50);
@@ -79,19 +112,40 @@ controls.update();
 // Add a constant for the minimum distance
 const GATE_RADIUS = 200;
 
+
+// Add this line to define the maximum number of ships allowed
+const MAX_SHIPS = 10;
+
 // Update the mouse click event listener
 window.addEventListener('click', (event) => {
     const mouse = new THREE.Vector2(
         (event.clientX / window.innerWidth) * 2 - 1,
         - (event.clientY / window.innerHeight) * 2 + 1
     );
+    // if the user is click start button ignore
     if (event.target.id === "startButton") {
         return 
+    }
+    // cant place ships after game start 
+    if (simulationActive){
+        return
     }
 
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(mouse, camera);
-
+    for (const spaceShipindex in spaceships) {
+        const spaceShipData = spaceships[spaceShipindex]
+        const spaceship = spaceShipData.spaceship
+        const shipBody = spaceShipData.shipBody
+        const hasClickedOnShip = raycaster.intersectObject(spaceship)
+        // if a spaceship was clicked on remove it 
+        if(hasClickedOnShip.length > 0){
+            console.log(spaceship)
+            scene.remove(spaceship);
+            spaceships.splice(spaceShipindex,1)
+            return
+        }
+    }
     const intersects = raycaster.intersectObject(spaceSphere);
     if (intersects.length > 0) {
         const intersectionPoint = intersects[0].point;
@@ -102,7 +156,12 @@ window.addEventListener('click', (event) => {
 
         // Check if the distance is greater than the radius
         if (distanceToGate > GATE_RADIUS) {
-            createSpaceship(intersectionPoint); // Create a spaceship at the intersection point
+           // Check if the current number of ships is less than the maximum
+           if (spaceships.length < MAX_SHIPS) {
+                createSpaceship(intersectionPoint); // Create a spaceship at the intersection point
+            } else {
+                alert("You cannot place more than 10 ships!"); // Feedback when max ship limit is reached
+            }
         } else {
             alert("You cannot place a ship within 200 units of the gate!"); // Optional feedback
         }
@@ -115,8 +174,11 @@ let simulationActive = false;
 document.getElementById('startButton').addEventListener('click', () => {
     simulationActive = true;
 
+    spawnEnemyShips(); // Spawn enemy ships when the game starts
+
     // Move all spaceships towards the gate
-    for (const spaceship of spaceships) {
+    for (const spaceshipData of spaceships) {
+        var spaceship = spaceshipData.spaceship
         // Use the position of the enemy gate as the target
         const gatePosition = enemyGate.position.clone(); // Clone to avoid reference issues
         const direction = new THREE.Vector3().subVectors(gatePosition, spaceship.position).normalize();
@@ -144,7 +206,8 @@ function animate() {
 
     if (simulationActive) {
         // Update positions and physics
-        for (const spaceship of spaceships) {
+        for (const spaceshipData of spaceships) {
+            var spaceship = spaceshipData.spaceship
             // Check if userData and velocity are defined
             if (spaceship.userData && spaceship.userData.velocity) {
                 // Move spaceship according to the assigned velocity
@@ -154,6 +217,19 @@ function animate() {
             // Check collision with the gate
             if (checkCollision(spaceship, enemyGate)) {
                 alert("You win!"); // Notify the player of the win
+                resetGame(); // Reset the game
+                return; // Exit the animate function early after reset
+            }
+        }
+
+        for (const enemyData of enemies){
+            var enemyShip = enemyData.enemyShip
+            if(enemyShip.userData && enemyShip.userData.velocity){
+                enemyShip.position.add(enemyShip.userData.velocity)
+            }
+            // Check for enemy ship collisions with the player gate
+            if (checkCollision(enemyShip, playerGate)) {
+                alert("You lose!"); // Notify the player of the win
                 resetGame(); // Reset the game
                 return; // Exit the animate function early after reset
             }
@@ -172,9 +248,18 @@ animate();
 
 // Add this function to reset the game
 function resetGame() {
+
+    // Reset the enemies
+    spaceships.forEach(spaceshipData => {
+        var spaceship = spaceshipData.spaceship
+        scene.remove(spaceship);
+    });
+    spaceships = [];
+
     // Reset spaceship array
-    spaceships.forEach(ship => {
-        scene.remove(ship);
+    enemies.forEach(enemyData => {
+        var enemyShip = enemyData.enemyShip
+        scene.remove(enemyShip);
     });
     spaceships = [];
     
@@ -187,4 +272,34 @@ function checkCollision(objectA, objectB) {
     const boxA = new THREE.Box3().setFromObject(objectA);
     const boxB = new THREE.Box3().setFromObject(objectB);
     return boxA.intersectsBox(boxB);
+}
+
+// Function to spawn enemy ships
+function spawnEnemyShips() {
+    const enemyCount = 10; // Number of enemy ships to spawn
+    let spawnedEnemies = 0; // Track how many enemy ships have been successfully spawned
+
+    while (spawnedEnemies < enemyCount) {
+        // Random positions to spawn within a certain range
+        const randomX = (Math.random() - 0.5) * 1000;  // Random X position
+        const randomZ = (Math.random() - 0.5) * 1000;  // Random Z position
+        const enemyShipPosition = new THREE.Vector3(randomX, 0, randomZ); // Spawn at ground level
+
+        // Calculate and check distance to player gate
+        const distanceToGate = enemyShipPosition.distanceTo(playerGate.position);
+
+        // Only spawn if the distance is greater than the defined threshold
+        if (distanceToGate > GATE_RADIUS) {
+            const enemyShip = createEnemyShip(enemyShipPosition); // Create the enemy ship
+            
+            // Calculate direction to player gate
+            const directionToGate = playerGate.position.clone().sub(enemyShip.position).normalize();
+
+            // Set enemy ship's moving velocity in userData for future updates
+            enemyShip.userData.velocity = directionToGate.multiplyScalar(0.05); // Adjust speed as desired
+
+            spawnedEnemies++; // Increment the count of spawned enemies
+        } 
+        // If the distance is less than or equal to 200 units, a new position will be tried in the next iteration
+    }
 }
