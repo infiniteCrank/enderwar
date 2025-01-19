@@ -76,12 +76,18 @@ controls.enableZoom = true;
 controls.target.set(0, 0, 0); 
 controls.update();
 
-// Add mouse click event to place spaceships
+// Add a constant for the minimum distance
+const GATE_RADIUS = 200;
+
+// Update the mouse click event listener
 window.addEventListener('click', (event) => {
     const mouse = new THREE.Vector2(
         (event.clientX / window.innerWidth) * 2 - 1,
         - (event.clientY / window.innerHeight) * 2 + 1
     );
+    if (event.target.id === "startButton") {
+        return 
+    }
 
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(mouse, camera);
@@ -89,7 +95,17 @@ window.addEventListener('click', (event) => {
     const intersects = raycaster.intersectObject(spaceSphere);
     if (intersects.length > 0) {
         const intersectionPoint = intersects[0].point;
-        createSpaceship(intersectionPoint); // Create a spaceship at the intersection point
+
+        // Calculate the distance from the intersection point to the gate
+        const gatePosition = enemyGate.position.clone();
+        const distanceToGate = intersectionPoint.distanceTo(gatePosition);
+
+        // Check if the distance is greater than the radius
+        if (distanceToGate > GATE_RADIUS) {
+            createSpaceship(intersectionPoint); // Create a spaceship at the intersection point
+        } else {
+            alert("You cannot place a ship within 200 units of the gate!"); // Optional feedback
+        }
     }
 });
 
@@ -122,7 +138,7 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Animation loop
+// Update the animate function for collision detection
 function animate() {
     requestAnimationFrame(animate);
 
@@ -134,6 +150,13 @@ function animate() {
                 // Move spaceship according to the assigned velocity
                 spaceship.position.add(spaceship.userData.velocity); // Update position
             }
+
+            // Check collision with the gate
+            if (checkCollision(spaceship, enemyGate)) {
+                alert("You win!"); // Notify the player of the win
+                resetGame(); // Reset the game
+                return; // Exit the animate function early after reset
+            }
         }
 
         // Step the physics world
@@ -144,4 +167,24 @@ function animate() {
     renderer.render(scene, camera);
 }
 
+
 animate();
+
+// Add this function to reset the game
+function resetGame() {
+    // Reset spaceship array
+    spaceships.forEach(ship => {
+        scene.remove(ship);
+    });
+    spaceships = [];
+    
+    // Reset any other necessary state
+    simulationActive = false;
+}
+
+// Function to check collision between two objects
+function checkCollision(objectA, objectB) {
+    const boxA = new THREE.Box3().setFromObject(objectA);
+    const boxB = new THREE.Box3().setFromObject(objectB);
+    return boxA.intersectsBox(boxB);
+}
