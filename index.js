@@ -468,9 +468,6 @@ function checkProjectileCollisions() {
                 // Check if the player ship's health is 0
                 if (playerShip.userData.health <= 0) {
                     // Remove player ship from the scene
-                    scene.remove(playerShip.userData.healthBar);
-                    playerShip.userData.healthBar.geometry.dispose();
-                    playerShip.userData.healthBar.material.dispose();
                     scene.remove(playerShip);
                     playerShip.geometry.dispose();
                     playerShip.material.dispose();
