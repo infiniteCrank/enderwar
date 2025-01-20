@@ -1,6 +1,15 @@
 import * as THREE from "three";
 import { OrbitControls } from "addons";
 
+// the minimum distance away from teh gate a unit can be placed 
+const GATE_RADIUS = 400;
+// the maximum number of player ships allowed
+const MAX_SHIPS = 10;
+// the total enemy units to spawn 
+const TOTAL_ENEMY_SPAWN = 10
+//projectile rate of fire for both enemy and player 
+const RATE_OF_FIRE = 500;
+
 // Initialize Three.js
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -51,7 +60,7 @@ function createSpaceship(position) {
 
     // Initialize userData to store health and velocity
     spaceship.userData = {
-        health: 5, // Set initial health to 5
+        health: 50, // Set initial health to 5
         velocity: new THREE.Vector3(0, 0, 0),
         playerShip: true,
     };
@@ -77,7 +86,7 @@ function createEnemyShip(position) {
     world.addBody(enemyShipBody);
 
     enemyShip.userData = {
-        health: 5, 
+        health: 50, 
         velocity: new THREE.Vector3(0, 0, 0),
         enemyShip: true
     };
@@ -109,12 +118,6 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableZoom = true; 
 controls.target.set(0, 0, 0); 
 controls.update();
-
-// Add a constant for the minimum distance
-const GATE_RADIUS = 400;
-
-// Add this line to define the maximum number of ships allowed
-const MAX_SHIPS = 10;
 
 // Update the mouse click event listener
 window.addEventListener('click', (event) => {
@@ -177,7 +180,6 @@ document.getElementById('startButton').addEventListener('click', () => {
     simulationActive = true;
 
     spawnEnemyShips(); // Spawn enemy ships when the game starts
-    spawnObstacles(10); // Adjust the number of obstacles
 
     // Move all spaceships towards the gate
     for (const spaceshipData of spaceships) {
@@ -220,6 +222,16 @@ function animate() {
         for (const spaceshipData of spaceships) {
 
             const spaceship = spaceshipData.spaceship;
+
+            // Get the nearest player ship
+            const nearestEnemyrShip = getNearestEnemyShip(spaceship.position);
+            
+            if (nearestEnemyrShip) {
+                const directionToPlayer = nearestEnemyrShip.position.clone().sub(spaceship.position).normalize();
+                // Calculate the rotation angle
+                const lookAtTarget = new THREE.Vector3().addVectors(spaceship.position, directionToPlayer);
+                spaceship.lookAt(lookAtTarget);
+            }
 
             if (spaceship.userData && spaceship.userData.velocity) {
                 spaceship.position.add(spaceship.userData.velocity);
@@ -315,8 +327,6 @@ function animate() {
                 }
             }
         }
-
-
     }else{
         //need to set the health bars before the game starts 
         for (const spaceshipData of spaceships) {
@@ -388,7 +398,7 @@ function checkCollision(objectA, objectB) {
 
 // Function to spawn enemy ships
 function spawnEnemyShips() {
-    const enemyCount = 10; // Number of enemy ships to spawn
+    const enemyCount = TOTAL_ENEMY_SPAWN; // Number of enemy ships to spawn
     let spawnedEnemies = 0; // Track how many enemy ships have been successfully spawned
 
     while (spawnedEnemies < enemyCount) {
@@ -477,7 +487,6 @@ function shootProjectiles(enemyShip) {
 // Create projectiles for player ships
 function shootPlayerProjectiles(spaceShip) {
     const nearestEnemyShip = getNearestEnemyShip(spaceShip.position);
-    console.log()
     if (nearestEnemyShip) {
         const directionToEnemy = nearestEnemyShip.position.clone().sub(spaceShip.position).normalize();
         console.log("enemy direction:")
@@ -494,14 +503,14 @@ setInterval(() => {
     for (const enemyData of enemies) {
         shootProjectiles(enemyData.enemyShip);
     }
-}, 500); // Fire every 500 ms
+}, RATE_OF_FIRE); // Fire every 500 ms
 
 // Call the function on intervals for both enemies and player ships
 setInterval(() => {
     for (const shipData of spaceships) {
         shootPlayerProjectiles(shipData.spaceship);
     }
-}, 500); // Fire every 500 ms
+}, RATE_OF_FIRE); // Fire every 500 ms
 
 // Update projectile positions and remove them if necessary
 function updateProjectiles() {
@@ -637,6 +646,7 @@ function spawnObstacles(count) {
         }
     }
 }
+spawnObstacles(10); // Adjust the number of obstacles
 
 function steerAroundObstacle(spaceship, obstacle) {
     const obstaclePosition = obstacle.position.clone();
