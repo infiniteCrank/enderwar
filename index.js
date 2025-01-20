@@ -51,10 +51,8 @@ function createSpaceship(position) {
 
     // Initialize userData to store health and velocity
     spaceship.userData = {
-        health: 10, // Health
         velocity: new THREE.Vector3(0, 0, 0),
         playerShip: true,
-        healthBar: createHealthBar(10) // Create health bar
     };
     spaceship.userData.healthBar.scale.x = (spaceship.userData.health / 10) * 10;
 
@@ -79,9 +77,7 @@ function createEnemyShip(position) {
     world.addBody(enemyShipBody);
 
     enemyShip.userData = {
-        health: 10, // Health
         velocity: new THREE.Vector3(0, 0, 0),
-        healthBar: createHealthBar(10) // Create health bar
     };
     enemyShip.userData.healthBar.scale.x = (enemyShip.userData.health / 10) * 10;
     
@@ -230,7 +226,7 @@ function animate() {
         }
 
         for (const enemyData of enemies) {
-            
+
             const enemyShip = enemyData.enemyShip;
 
             // Get the nearest player ship
