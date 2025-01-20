@@ -114,7 +114,7 @@ controls.target.set(0, 0, 0);
 controls.update();
 
 // Add a constant for the minimum distance
-const GATE_RADIUS = 800;
+const GATE_RADIUS = 400;
 
 // Add this line to define the maximum number of ships allowed
 const MAX_SHIPS = 10;
@@ -216,14 +216,9 @@ function animate() {
         for (const spaceshipData of spaceships) {
 
             const spaceship = spaceshipData.spaceship;
+
             if (spaceship.userData && spaceship.userData.velocity) {
                 spaceship.position.add(spaceship.userData.velocity);
-            }
-
-            // Update health bar position and scale if userData is defined
-            if (spaceship.userData && spaceship.userData.healthBar) {
-                spaceship.userData.healthBar.position.set(spaceship.position.x, spaceship.position.y + 30, spaceship.position.z);
-                spaceship.userData.healthBar.scale.x = (spaceship.userData.health / 10) * 10; // Adjust width based on health
             }
 
             // Collision check with the enemy gate
@@ -235,6 +230,7 @@ function animate() {
         }
 
         for (const enemyData of enemies) {
+            
             const enemyShip = enemyData.enemyShip;
 
             // Get the nearest player ship
@@ -249,12 +245,6 @@ function animate() {
 
             if (enemyShip.userData && enemyShip.userData.velocity) {
                 enemyShip.position.add(enemyShip.userData.velocity);
-                
-                // Update health bar position and scale if userData is defined
-                if (enemyShip.userData.healthBar) {
-                    enemyShip.userData.healthBar.position.set(enemyShip.position.x, enemyShip.position.y + 30, enemyShip.position.z);
-                    enemyShip.userData.healthBar.scale.x = (enemyShip.userData.health / 10) * 10; // Adjust width based on health
-                }
             }
 
             // Check for enemy ship collisions with the player gate
@@ -391,20 +381,6 @@ function spawnEnemyShips() {
         } 
         // If the distance is less than or equal to 200 units, a new position will be tried in the next iteration
     }
-}
-
-// Function to create health bar
-function createHealthBar(health) {
-    const healthBarGeometry = new THREE.PlaneGeometry(10, 5);
-    const healthBarMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const healthBar = new THREE.Mesh(healthBarGeometry, healthBarMaterial);
-
-    // Set the initial health bar scale
-    healthBar.scale.x = health; // Scale according to health value
-    healthBar.position.y += 5; // Position it above the ship
-
-    scene.add(healthBar);
-    return healthBar;
 }
 
 function getNearestPlayerShip(enemyShipPosition) {
