@@ -231,6 +231,17 @@ function animate() {
 
         for (const enemyData of enemies) {
             const enemyShip = enemyData.enemyShip;
+
+            // Get the nearest player ship
+            const nearestPlayerShip = getNearestPlayerShip(enemyShip.position);
+            
+            if (nearestPlayerShip) {
+                const directionToPlayer = nearestPlayerShip.position.clone().sub(enemyShip.position).normalize();
+                // Calculate the rotation angle
+                const lookAtTarget = new THREE.Vector3().addVectors(enemyShip.position, directionToPlayer);
+                enemyShip.lookAt(lookAtTarget);
+            }
+
             if (enemyShip.userData && enemyShip.userData.velocity) {
                 enemyShip.position.add(enemyShip.userData.velocity);
                 
@@ -424,14 +435,30 @@ function shootTurrets() {
     for (const enemyData of enemies) {
         const enemyShip = enemyData.enemyShip;
 
-        // Calculate the direction towards the enemy gate (or any target)
-        const targetPosition = enemyGate.position.clone();
-        const direction = new THREE.Vector3().subVectors(targetPosition, enemyShip.position).normalize();
-
-        // Create a projectile and manage its shooting pacing
         setInterval(() => {
-            const projectileData = createProjectile(enemyShip.position, direction);
-            projectileArray.push(projectileData);
+            // Find the nearest player ship for targeting
+            const nearestPlayerShip = getNearestPlayerShip(enemyShip.position);
+            if (nearestPlayerShip) {
+                // Calculate the direction to the nearest player ship
+                const direction = new THREE.Vector3().subVectors(nearestPlayerShip.position, enemyShip.position).normalize();
+                const projectileData = createProjectile(enemyShip.position, direction);
+                projectileArray.push(projectileData);
+            }
         }, shootCooldown); // Adjust cooldown to desired timing
     }
+}
+
+function getNearestPlayerShip(enemyShipPosition) {
+    let nearestShip = null;
+    let minDistance = Infinity;
+
+    for (const playerShipData of spaceships) {
+        const distance = playerShipData.spaceship.position.distanceTo(enemyShipPosition);
+        if (distance < minDistance) {
+            minDistance = distance;
+            nearestShip = playerShipData.spaceship;
+        }
+    }
+
+    return nearestShip;
 }
