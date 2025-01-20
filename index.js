@@ -54,7 +54,6 @@ function createSpaceship(position) {
         velocity: new THREE.Vector3(0, 0, 0),
         playerShip: true,
     };
-    spaceship.userData.healthBar.scale.x = (spaceship.userData.health / 10) * 10;
 
     spaceships.push({spaceship, shipBody, healthbar: spaceship.userData.healthBar}); 
     return spaceship;
@@ -79,7 +78,6 @@ function createEnemyShip(position) {
     enemyShip.userData = {
         velocity: new THREE.Vector3(0, 0, 0),
     };
-    enemyShip.userData.healthBar.scale.x = (enemyShip.userData.health / 10) * 10;
     
     enemies.push({enemyShip, enemyShipBody, healthBar:enemyShip.userData.healthBar});
     return enemyShip;
@@ -208,6 +206,10 @@ function animate() {
     requestAnimationFrame(animate);
 
     if (simulationActive) {
+
+        // Update projectiles
+        updateProjectiles();
+
         // Update positions and physics
         for (const spaceshipData of spaceships) {
 
@@ -392,4 +394,59 @@ function getNearestPlayerShip(enemyShipPosition) {
     }
 
     return nearestShip;
+}
+
+// Array to hold projectiles
+let projectiles = [];
+
+// Function to create a projectile
+function createProjectile(position, direction) {
+    const projectileGeometry = new THREE.SphereGeometry(5, 8, 8); // Small sphere for projectile
+    const projectileMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 }); // Yellow color for projectile
+    const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
+    projectile.position.copy(position); // Set initial position to enemy ship's position
+    projectile.userData = {
+        direction: direction.clone().normalize(), // Store the direction in userData
+        travelDistance: 0 // Track the traveled distance
+    };
+    scene.add(projectile);
+    projectiles.push(projectile); // Add to projectile array
+}
+
+// Delay method for shooting projectiles
+function shootProjectiles(enemyShip) {
+    const nearestPlayerShip = getNearestPlayerShip(enemyShip.position);
+    if (nearestPlayerShip) {
+        const directionToPlayer = nearestPlayerShip.position.clone().sub(enemyShip.position).normalize();
+
+        // Create and fire a projectile
+        createProjectile(enemyShip.position, directionToPlayer);
+    }
+}
+
+// Shooting function to be called repeatedly
+setInterval(() => {
+    for (const enemyData of enemies) {
+        shootProjectiles(enemyData.enemyShip);
+    }
+}, 500); // Fire every 500 ms
+
+// Update projectile positions and remove them if necessary
+function updateProjectiles() {
+    projectiles.forEach((projectile, index) => {
+        const speed = 2; // Speed of the projectile
+        if (projectile.userData && projectile.userData.direction) {
+            // Move projectile based on its direction
+            projectile.position.add(projectile.userData.direction.clone().multiplyScalar(speed));
+            projectile.userData.travelDistance += speed; // Update traveled distance
+
+            // Remove projectile after 100 units
+            if (projectile.userData.travelDistance > 100) {
+                scene.remove(projectile);
+                projectile.geometry.dispose();
+                projectile.material.dispose();
+                projectiles.splice(index, 1); // Remove from array
+            }
+        }
+    });
 }
