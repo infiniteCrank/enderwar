@@ -440,11 +440,12 @@ function shootTurrets() {
             const nearestPlayerShip = getNearestPlayerShip(enemyShip.position);
             if (nearestPlayerShip) {
                 // Calculate the direction to the nearest player ship
-                const direction = new THREE.Vector3().subVectors(nearestPlayerShip.position, enemyShip.position).normalize();
+                const direction = nearestPlayerShip.position.clone().sub(enemyShip.position).normalize(); // Corrected here
+                
                 const projectileData = createProjectile(enemyShip.position, direction);
                 projectileArray.push(projectileData);
             }
-        }, shootCooldown); // Adjust cooldown to desired timing
+        }, shootCooldown); // Adjust cooldown as necessary
     }
 }
 
