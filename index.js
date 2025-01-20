@@ -444,8 +444,8 @@ function updateProjectiles() {
             projectile.position.add(projectile.userData.direction.clone().multiplyScalar(speed));
             projectile.userData.travelDistance += speed; // Update traveled distance
 
-            // Remove projectile after 100 units
-            if (projectile.userData.travelDistance > 100) {
+            // Remove projectile after 200 units
+            if (projectile.userData.travelDistance > 200) {
                 scene.remove(projectile);
                 projectile.geometry.dispose();
                 projectile.material.dispose();
