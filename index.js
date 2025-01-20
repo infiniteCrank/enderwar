@@ -397,12 +397,11 @@ function getNearestPlayerShip(enemyShipPosition) {
 function getNearestEnemyShip(playerShipPosition) {
     let nearestShip = null;
     let minDistance = Infinity;
-
     for (const shipData of enemies) {
         const distance = shipData.enemyShip.position.distanceTo(playerShipPosition);
         if (distance < minDistance) {
             minDistance = distance;
-            nearestShip = shipData.spaceship;
+            nearestShip = shipData.enemyShip;
         }
     }
 
@@ -424,7 +423,7 @@ function createProjectile(position, direction) {
         travelDistance: 0 // Track the traveled distance
     };
     scene.add(projectile);
-    projectiles.push(projectile); // Add to projectile array
+    return projectile
 }
 
 // Delay method for shooting projectiles
@@ -434,16 +433,20 @@ function shootProjectiles(enemyShip) {
         const directionToPlayer = nearestPlayerShip.position.clone().sub(enemyShip.position).normalize();
 
         // Create and fire a projectile
-        createProjectile(enemyShip.position, directionToPlayer);
+        const projectile = createProjectile(enemyShip.position, directionToPlayer, false);
+        projectiles.push(projectile)
     }
 }
 
 // Create projectiles for player ships
 function shootPlayerProjectiles(spaceShip) {
     const nearestEnemyShip = getNearestEnemyShip(spaceShip.position);
+    console.log()
     if (nearestEnemyShip) {
         const directionToEnemy = nearestEnemyShip.position.clone().sub(spaceShip.position).normalize();
-
+        console.log("enemy direction:")
+        console.log(directionToEnemy)
+        console.log(spaceShip.position)
         // Create and fire a projectile
         const projectile = createProjectile(spaceShip.position, directionToEnemy);
         playerProjectiles.push(projectile); // Store it in player projectiles
