@@ -35,7 +35,7 @@ world.gravity.set(0, 0, -9.82); // Gravity
 // Array to hold created spaceships
 let spaceships = [];
 
-// Modify the spaceship creation functions to include health
+// Modify the spaceship creation function to include health
 function createSpaceship(position) {
     const shipGeometry = new THREE.BoxGeometry(40, 40, 40);
     const shipMaterial = new THREE.MeshPhongMaterial({ color: 0xff00ff });
@@ -51,11 +51,12 @@ function createSpaceship(position) {
 
     // Initialize userData to store health and velocity
     spaceship.userData = {
+        health: 5, // Set initial health to 5
         velocity: new THREE.Vector3(0, 0, 0),
         playerShip: true,
     };
 
-    spaceships.push({spaceship, shipBody, healthbar: spaceship.userData.healthBar}); 
+    spaceships.push({spaceship, shipBody});
     return spaceship;
 }
 
@@ -209,6 +210,9 @@ function animate() {
 
         // Update projectiles
         updateProjectiles();
+
+        // Check for projectile collisions with player ships
+        checkProjectileCollisions();
 
         // Update positions and physics
         for (const spaceshipData of spaceships) {
@@ -446,6 +450,41 @@ function updateProjectiles() {
                 projectile.geometry.dispose();
                 projectile.material.dispose();
                 projectiles.splice(index, 1); // Remove from array
+            }
+        }
+    });
+}
+
+function checkProjectileCollisions() {
+    projectiles.forEach((projectile, projectileIndex) => {
+        for (const playerShipData of spaceships) {
+            const playerShip = playerShipData.spaceship;
+
+            // Check collision between projectile and player ship
+            if (checkCollision(projectile, playerShip)) {
+                // Reduce health by 1
+                playerShip.userData.health -= 1;
+
+                // Check if the player ship's health is 0
+                if (playerShip.userData.health <= 0) {
+                    // Remove player ship from the scene
+                    scene.remove(playerShip.userData.healthBar);
+                    playerShip.userData.healthBar.geometry.dispose();
+                    playerShip.userData.healthBar.material.dispose();
+                    scene.remove(playerShip);
+                    playerShip.geometry.dispose();
+                    playerShip.material.dispose();
+                    world.removeBody(playerShipData.shipBody);
+                    spaceships.splice(spaceships.indexOf(playerShipData), 1); // Remove from array
+                }
+
+                // Remove the projectile after hit
+                scene.remove(projectile);
+                projectile.geometry.dispose();
+                projectile.material.dispose();
+                projectiles.splice(projectileIndex, 1); // Remove from the projectile array
+
+                return; // Exit the loop once a hit is processed
             }
         }
     });
