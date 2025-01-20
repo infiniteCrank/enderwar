@@ -177,6 +177,7 @@ document.getElementById('startButton').addEventListener('click', () => {
     simulationActive = true;
 
     spawnEnemyShips(); // Spawn enemy ships when the game starts
+    spawnObstacles(10); // Adjust the number of obstacles
 
     // Move all spaceships towards the gate
     for (const spaceshipData of spaceships) {
@@ -222,6 +223,24 @@ function animate() {
 
             if (spaceship.userData && spaceship.userData.velocity) {
                 spaceship.position.add(spaceship.userData.velocity);
+
+
+                // Check for collision with obstacles
+                scene.children.forEach((child) => {
+                    if (child instanceof THREE.Mesh && child !== spaceSphere && 
+                        child !== playerGate && child !== enemyGate) {
+                        
+                        if (checkCollision(spaceship, child)) {
+                            // If a collision is detected, redirect the ship
+                            steerAroundObstacle(spaceship, child);
+                        }
+                    }
+                });
+                // Continue movement towards the gates after steering
+                const gatePosition = enemyGate.position.clone();
+                const directionToGate = gatePosition.clone().sub(spaceship.position).normalize();
+                spaceship.userData.velocity.add(directionToGate.multiplyScalar(0.1)); // Adjust speed for a smoother approach
+                spaceship.userData.velocity.normalize(); // Normalize to keep consistent speed
             }
 
             // Collision check with the enemy gate
@@ -248,6 +267,23 @@ function animate() {
 
             if (enemyShip.userData && enemyShip.userData.velocity) {
                 enemyShip.position.add(enemyShip.userData.velocity);
+
+                 // Check for collision with obstacles
+                 scene.children.forEach((child) => {
+                    if (child instanceof THREE.Mesh && child !== spaceSphere && 
+                        child !== playerGate && child !== enemyGate) {
+                        
+                        if (checkCollision(enemyShip, child)) {
+                            // If a collision is detected, redirect the ship
+                            steerAroundObstacle(enemyShip, child);
+                        }
+                    }
+                });
+                // Continue movement towards the gates after steering
+                const gatePosition = playerGate.position.clone();
+                const directionToGate = gatePosition.clone().sub(enemyShip.position).normalize();
+                enemyShip.userData.velocity.add(directionToGate.multiplyScalar(0.1)); // Adjust speed for a smoother approach
+                enemyShip.userData.velocity.normalize(); // Normalize to keep consistent speed
             }
 
             // Check for enemy ship collisions with the player gate
@@ -567,4 +603,48 @@ function checkPlayerProjectileCollisions() {
             }
         }
     });
+}
+
+// Function to create obstacles
+function createObstacle(position) {
+    const obstacleGeometry = new THREE.BoxGeometry(50, 50, 50); // Adjust size as needed
+    const obstacleMaterial = new THREE.MeshPhongMaterial({ color: 0x888888 }); // Grey color for obstacles
+    const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
+    obstacle.position.copy(position);
+    scene.add(obstacle);
+
+    const obstacleShape = new CANNON.Box(new CANNON.Vec3(50/2, 50/2, 50/2)); // Physics shape
+    const obstacleBody = new CANNON.Body({ mass: 0 }); // Static obstacle
+    obstacleBody.addShape(obstacleShape);
+    obstacleBody.position.copy(position);
+    world.addBody(obstacleBody);
+}
+
+// Function to spawn obstacles
+function spawnObstacles(count) {
+    for (let i = 0; i < count; i++) {
+        const randomX = (Math.random() - 0.5) * 800; // Adjust range
+        const randomY = (Math.random() - 0.5) * 800; // Adjust range
+        const randomZ = (Math.random() - 0.5) * 800; // Adjust range
+        const position = new THREE.Vector3(randomX, randomY, randomZ);
+        
+        // Ensure obstacles are not within a certain distance of the gates or other obstacles
+        const distanceToPlayerGate = position.distanceTo(playerGate.position);
+        const distanceToEnemyGate = position.distanceTo(enemyGate.position);
+
+        if (distanceToPlayerGate > 200 && distanceToEnemyGate > 200) {
+            createObstacle(position);
+        }
+    }
+}
+
+function steerAroundObstacle(spaceship, obstacle) {
+    const obstaclePosition = obstacle.position.clone();
+    const directionToObstacle = obstaclePosition.clone().sub(spaceship.position).normalize();
+
+    // Calculate a direction perpendicular to the obstacle
+    const perpendicularDirection = new THREE.Vector3(-directionToObstacle.z, 0, directionToObstacle.x);
+    
+    // Adjust the spaceship's velocity to move around the obstacle
+    spaceship.userData.velocity = perpendicularDirection.multiplyScalar(0.5); // Adjust speed as needed
 }
