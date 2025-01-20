@@ -188,7 +188,7 @@ document.getElementById('startButton').addEventListener('click', () => {
         const direction = new THREE.Vector3().subVectors(gatePosition, spaceship.position).normalize();
 
         // Set a velocity for the spaceship (adjust speed as desired)
-        spaceship.userData.velocity = direction.multiplyScalar(0.1); // Speed multiplier to control movement
+        spaceship.userData.velocity = direction.multiplyScalar(0.5); // Speed multiplier to control movement
     }
 });
 
@@ -299,7 +299,6 @@ function animate() {
 
             // Optional: Check if the projectile exits a certain range
             if (projectile.position.length() >= 800) {
-                console.log("removing projectile")
                 scene.remove(projectile);
                 world.removeBody(projectileBody);
                 projectileArray.splice(projectileArray.indexOf(data), 1);
@@ -356,6 +355,13 @@ function resetGame() {
     });
     enemies = [];
 
+    projectileArray.forEach(projectileData =>{
+        var {projectile, projectileBody} = projectileData
+        scene.remove(projectile);
+        world.removeBody(projectileBody);
+    })
+    projectileArray = [];
+
     simulationActive = false;
 }
 
@@ -388,7 +394,7 @@ function spawnEnemyShips() {
             const directionToGate = playerGate.position.clone().sub(enemyShip.position).normalize();
 
             // Set enemy ship's moving velocity in userData for future updates
-            enemyShip.userData.velocity = directionToGate.multiplyScalar(0.05); // Adjust speed as desired
+            enemyShip.userData.velocity = directionToGate.multiplyScalar(0.5); // Adjust speed as desired
 
             spawnedEnemies++; // Increment the count of spawned enemies
         } 
@@ -429,7 +435,7 @@ function createProjectile(position, direction) {
 }
 
 const shootCooldown = 1000; // milliseconds
-const projectileArray = []; // To keep track of projectiles
+let projectileArray = []; // To keep track of projectiles
 
 function shootTurrets() {
     for (const enemyData of enemies) {
