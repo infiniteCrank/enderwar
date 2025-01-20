@@ -178,6 +178,7 @@ document.getElementById('startButton').addEventListener('click', () => {
     simulationActive = true;
 
     spawnEnemyShips(); // Spawn enemy ships when the game starts
+    shootTurrets();
 
     // Move all spaceships towards the gate
     for (const spaceshipData of spaceships) {
@@ -277,6 +278,22 @@ function animate() {
                 }
             }
         }
+
+        // Projectile movement
+        projectileArray.forEach((data) => {
+            const { projectile, projectileBody } = data;
+
+            // Update the position based on physics
+            projectile.position.copy(projectileBody.position);
+
+            // Optional: Check if the projectile exits a certain range
+            if (projectile.position.length() >= 800) {
+                console.log("removing projectile")
+                scene.remove(projectile);
+                world.removeBody(projectileBody);
+                projectileArray.splice(projectileArray.indexOf(data), 1);
+            }
+        });
 
         // Step the physics world
         world.step(1 / 60);
@@ -380,4 +397,41 @@ function createHealthBar(health) {
 
     scene.add(healthBar);
     return healthBar;
+}
+
+function createProjectile(position, direction) {
+    const projectileGeometry = new THREE.SphereGeometry(5, 8, 8);
+    const projectileMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+    const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
+    projectile.position.copy(position);
+
+    // Define the projectile's physics body
+    const projectileShape = new CANNON.Sphere(5);
+    const projectileBody = new CANNON.Body({ mass: 0.2 }); // Lightweight
+    projectileBody.addShape(projectileShape);
+    projectileBody.position.copy(position);
+    world.addBody(projectileBody);
+
+    projectile.userData = { velocity: direction.multiplyScalar(0.2) }; // Set viable speed
+    scene.add(projectile);
+    return { projectile, projectileBody };
+}
+
+const shootCooldown = 1000; // milliseconds
+const projectileArray = []; // To keep track of projectiles
+
+function shootTurrets() {
+    for (const enemyData of enemies) {
+        const enemyShip = enemyData.enemyShip;
+
+        // Calculate the direction towards the enemy gate (or any target)
+        const targetPosition = enemyGate.position.clone();
+        const direction = new THREE.Vector3().subVectors(targetPosition, enemyShip.position).normalize();
+
+        // Create a projectile and manage its shooting pacing
+        setInterval(() => {
+            const projectileData = createProjectile(enemyShip.position, direction);
+            projectileArray.push(projectileData);
+        }, shootCooldown); // Adjust cooldown to desired timing
+    }
 }
