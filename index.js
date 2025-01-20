@@ -183,7 +183,6 @@ document.getElementById('startButton').addEventListener('click', () => {
     simulationActive = true;
 
     spawnEnemyShips(); // Spawn enemy ships when the game starts
-    shootTurrets();
 
     // Move all spaceships towards the gate
     for (const spaceshipData of spaceships) {
@@ -219,15 +218,6 @@ function animate() {
             const spaceship = spaceshipData.spaceship;
             if (spaceship.userData && spaceship.userData.velocity) {
                 spaceship.position.add(spaceship.userData.velocity);
-            }
-
-            // Collision check with projectiles 
-            for (const projectileIndex in projectileArray){
-                const projectileData = projectileArray[projectileIndex];
-                let {projectile, projectileBody} = projectileData;
-                if (checkCollision(projectile, spaceship)){
-                    spaceship.userData.health --;
-                }
             }
 
             // Update health bar position and scale if userData is defined
@@ -303,22 +293,6 @@ function animate() {
             }
         }
 
-        // Projectile movement
-        projectileArray.forEach((data) => {
-            const { projectile, projectileBody } = data;
-
-            // Update the position based on physics
-            projectile.position.copy(projectileBody.position);
-
-            // Optional: Check if the projectile exits a certain range
-            if (projectile.position.length() >= 800) {
-                scene.remove(projectile);
-                projectile.geometry.dispose();
-                projectile.material.dispose();
-                world.removeBody(projectileBody);
-                projectileArray.splice(projectileArray.indexOf(data), 1);
-            }
-        });
 
     }else{
         //need to set the health bars before the game starts 
@@ -352,8 +326,6 @@ animate();
 // Reset game function to clear out health bars and ships
 function resetGame() {
 
-    clearInterval(intervalId);
-
     const objectsToRemove = scene.children.filter((object) => {
         return (
           object instanceof THREE.Mesh &&
@@ -380,34 +352,8 @@ function resetGame() {
       });
       spaceships = [];
       enemies = [];
-      projectileArray = []
       simulationActive = false
     
-}
-
-function clearProjectiles(){
-    const objectsToRemove = scene.children.filter((object) => {
-        return (
-          object instanceof THREE.Mesh &&
-          object === projectile 
-        );
-      });
-    console.log(objectsToRemove)
-      // Clean up Three.js objects first
-      objectsToRemove.forEach((object) => {
-        if (object.geometry) object.geometry.dispose();
-        if (object.material) object.material.dispose();
-    
-        // Remove any associated physics body
-        const bodyToRemove = world.bodies.find(
-          (body) => body.userData && body.userData.mesh === object
-        );
-        if (bodyToRemove) {
-          world.remove(bodyToRemove); // Remove from physics world
-        }
-    
-        scene.remove(object);
-      });
 }
 
 // Function to check collision between two objects
@@ -459,49 +405,6 @@ function createHealthBar(health) {
 
     scene.add(healthBar);
     return healthBar;
-}
-
-const projectileGeometry = new THREE.SphereGeometry(5, 8, 8);
-const projectileMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00 });
-const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
-
-function createProjectile(position, direction) {
-    projectile.position.copy(position);
-
-    // Define the projectile's physics body
-    const projectileShape = new CANNON.Sphere(5);
-    const projectileBody = new CANNON.Body({ mass: 0.2 }); // Lightweight
-    projectileBody.addShape(projectileShape);
-    projectileBody.position.copy(position);
-    world.addBody(projectileBody);
-
-    projectile.userData = { velocity: direction.multiplyScalar(0.2) }; // Set viable speed
-    scene.add(projectile);
-    return { projectile, projectileBody };
-}
-
-const shootCooldown = 1000; // milliseconds
-let projectileArray = []; // To keep track of projectiles
-let intervalId 
-function shootTurrets() {
-    for (const enemyData of enemies) {
-        const enemyShip = enemyData.enemyShip;
-
-        intervalId = setInterval(() => {
-            if(simulationActive === false){
-                return
-            }
-            // Find the nearest player ship for targeting
-            const nearestPlayerShip = getNearestPlayerShip(enemyShip.position);
-            if (nearestPlayerShip) {
-                // Calculate the direction to the nearest player ship
-                const direction = nearestPlayerShip.position.clone().sub(enemyShip.position).normalize(); // Corrected here
-                
-                const projectileData = createProjectile(enemyShip.position, direction);
-                projectileArray.push(projectileData);
-            }
-        }, shootCooldown); // Adjust cooldown as necessary
-    }
 }
 
 function getNearestPlayerShip(enemyShipPosition) {
