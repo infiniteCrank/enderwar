@@ -2,13 +2,18 @@ import * as THREE from "three";
 import { OrbitControls } from "addons";
 
 // the minimum distance away from teh gate a unit can be placed 
-const GATE_RADIUS = 400;
+const GATE_RADIUS = 800;
 // the maximum number of player ships allowed
 const MAX_SHIPS = 10;
 // the total enemy units to spawn 
-const TOTAL_ENEMY_SPAWN = 10
-//projectile rate of fire for both enemy and player 
+const TOTAL_ENEMY_SPAWN = 10;
+// projectile rate of fire for player 
 const RATE_OF_FIRE = 500;
+// projectile rate of fire for enemy 
+const ENEMY_RATE_OF_FIRE = 500;
+
+const PLAYER_RANGE = 200;
+const ENEMY_RANGE = 200;
 
 // Initialize Three.js
 const scene = new THREE.Scene();
@@ -60,7 +65,7 @@ function createSpaceship(position) {
 
     // Initialize userData to store health and velocity
     spaceship.userData = {
-        health: 50, // Set initial health to 5
+        health: 5, // Set initial health to 5
         velocity: new THREE.Vector3(0, 0, 0),
         playerShip: true,
     };
@@ -91,7 +96,7 @@ function createEnemyShip(position) {
         enemyShip: true
     };
     
-    enemies.push({enemyShip, enemyShipBody, healthBar:enemyShip.userData.healthBar});
+    enemies.push({enemyShip, enemyShipBody});
     return enemyShip;
 }
 
@@ -215,8 +220,9 @@ function animate() {
         updatePlayerProjectiles();
 
         // Check for projectile collisions with player ships
-        checkProjectileCollisions();
         checkPlayerProjectileCollisions();
+        checkProjectileCollisions();
+        
 
         // Update positions and physics
         for (const spaceshipData of spaceships) {
@@ -280,8 +286,8 @@ function animate() {
             if (enemyShip.userData && enemyShip.userData.velocity) {
                 enemyShip.position.add(enemyShip.userData.velocity);
 
-                 // Check for collision with obstacles
-                 scene.children.forEach((child) => {
+                // Check for collision with obstacles
+                scene.children.forEach((child) => {
                     if (child instanceof THREE.Mesh && child !== spaceSphere && 
                         child !== playerGate && child !== enemyGate) {
                         
@@ -306,7 +312,7 @@ function animate() {
             }
         }
 
-        // Collision handling for player and enemy ships both ships should get destroyed 
+        //Collision handling for player and enemy ships both ships should get destroyed 
         for (const playerShip of spaceships) {
             for (const enemyShip of enemies) {
                 if (checkCollision(playerShip.spaceship, enemyShip.enemyShip)) {
@@ -323,28 +329,9 @@ function animate() {
                         enemyShip.enemyShip.material.dispose();
                         world.removeBody(enemyShip.enemyShipBody);
                         enemies.splice(enemies.indexOf(enemyShip), 1); // Remove enemy ship from array
+                        console.log("both ships destroyed")
                     }
                 }
-            }
-        }
-    }else{
-        //need to set the health bars before the game starts 
-        for (const spaceshipData of spaceships) {
-            const spaceship = spaceshipData.spaceship;
-            
-            // Update health bar position and scale if userData is defined
-            if (spaceship.userData.healthBar) {
-                spaceship.userData.healthBar.position.set(spaceship.position.x, spaceship.position.y + 30, spaceship.position.z);
-                spaceship.userData.healthBar.scale.x = (spaceship.userData.health / 10) * 10; // Adjust width based on health
-            }
-        }
-
-        for (const enemyData of enemies) {
-            const enemyShip = enemyData.enemyShip;
-            // Update health bar position and scale if userData is defined
-            if (enemyShip.userData.healthBar) {
-                enemyShip.userData.healthBar.position.set(enemyShip.position.x, enemyShip.position.y + 30, enemyShip.position.z);
-                enemyShip.userData.healthBar.scale.x = (enemyShip.userData.health / 10) * 10; // Adjust width based on health
             }
         }
     }
@@ -402,10 +389,27 @@ function spawnEnemyShips() {
     let spawnedEnemies = 0; // Track how many enemy ships have been successfully spawned
 
     while (spawnedEnemies < enemyCount) {
-        // Random positions to spawn within a certain range
-        const randomX = (Math.random() - 0.5) * 1000;  // Random X position
-        const randomZ = (Math.random() - 0.5) * 1000;  // Random Z position
-        const enemyShipPosition = new THREE.Vector3(randomX, -300, randomZ); // near enemy gate 
+
+        const enemyType = Math.random() < 0.4 ? 'defensive' : 'aggressive'; // Randomly choose enemy type
+        let enemyShipPosition
+        if(enemyType ==="aggressive"){// aggressive types stay on the outside edge 
+            // Generate random positions within the sphere radius
+            const radius = 300; // Size of your space sphere
+            const randomAngle = Math.random() * Math.PI * 2; // Angle for spherical coordinates
+            const randomHeight = Math.random() * radius; // Height from the center to the sphere surface
+            // Convert spherical coordinates to Cartesian to ensure the position is within the sphere
+            const x = Math.cos(randomAngle) * Math.sqrt(radius * radius - randomHeight * randomHeight);
+            const y = randomHeight - 300; // Adjust Y relative to your setup to ensure spawning within the sphere height
+            const z = Math.sin(randomAngle) * Math.sqrt(radius * radius - randomHeight * randomHeight);
+
+            enemyShipPosition = new THREE.Vector3(x, y, z); // Create position vector
+        }else{ // defence stays in the middle 
+            // Random positions to spawn within a certain range
+            const randomX = (Math.random() * 600) - 300  // Random X position
+            const randomZ = (Math.random() * 600) - 300  // Random Z position
+            enemyShipPosition = new THREE.Vector3(randomX, -300, randomZ); // near enemy gate 
+        }
+        
 
         // Calculate and check distance to player gate
         const distanceToGate = enemyShipPosition.distanceTo(playerGate.position);
@@ -419,10 +423,10 @@ function spawnEnemyShips() {
 
             // Set enemy ship's moving velocity in userData for future updates
             enemyShip.userData.velocity = directionToGate.multiplyScalar(0.5); // Adjust speed as desired
-
+            enemyShip.userData.EnemyType = enemyType;
+            console.log(enemyType);
             spawnedEnemies++; // Increment the count of spawned enemies
         } 
-        // If the distance is less than or equal to 200 units, a new position will be tried in the next iteration
     }
 }
 
@@ -489,9 +493,6 @@ function shootPlayerProjectiles(spaceShip) {
     const nearestEnemyShip = getNearestEnemyShip(spaceShip.position);
     if (nearestEnemyShip) {
         const directionToEnemy = nearestEnemyShip.position.clone().sub(spaceShip.position).normalize();
-        console.log("enemy direction:")
-        console.log(directionToEnemy)
-        console.log(spaceShip.position)
         // Create and fire a projectile
         const projectile = createProjectile(spaceShip.position, directionToEnemy);
         playerProjectiles.push(projectile); // Store it in player projectiles
@@ -503,7 +504,7 @@ setInterval(() => {
     for (const enemyData of enemies) {
         shootProjectiles(enemyData.enemyShip);
     }
-}, RATE_OF_FIRE); // Fire every 500 ms
+}, ENEMY_RATE_OF_FIRE); // Fire every 500 ms
 
 // Call the function on intervals for both enemies and player ships
 setInterval(() => {
@@ -520,9 +521,8 @@ function updateProjectiles() {
             // Move projectile based on its direction
             projectile.position.add(projectile.userData.direction.clone().multiplyScalar(speed));
             projectile.userData.travelDistance += speed; // Update traveled distance
-
             // Remove projectile after 200 units
-            if (projectile.userData.travelDistance > 200) {
+            if (projectile.userData.travelDistance > ENEMY_RANGE) {
                 scene.remove(projectile);
                 projectile.geometry.dispose();
                 projectile.material.dispose();
@@ -540,7 +540,7 @@ function updatePlayerProjectiles() {
             projectile.position.add(projectile.userData.direction.clone().multiplyScalar(speed));
             projectile.userData.travelDistance += speed;
 
-            if (projectile.userData.travelDistance > 200) {
+            if (projectile.userData.travelDistance > PLAYER_RANGE) {
                 scene.remove(projectile);
                 projectile.geometry.dispose();
                 projectile.material.dispose();
@@ -559,7 +559,7 @@ function checkProjectileCollisions() {
             if (checkCollision(projectile, playerShip)) {
                 // Reduce health by 1
                 playerShip.userData.health -= 1;
-
+                console.log("player ship hit. health at :" +playerShip.userData.health )
                 // Check if the player ship's health is 0
                 if (playerShip.userData.health <= 0) {
                     // Remove player ship from the scene
@@ -568,6 +568,7 @@ function checkProjectileCollisions() {
                     playerShip.material.dispose();
                     world.removeBody(playerShipData.shipBody);
                     spaceships.splice(spaceships.indexOf(playerShipData), 1); // Remove from array
+                    console.log("player ship destoryed")
                 }
 
                 // Remove the projectile after hit
@@ -583,15 +584,15 @@ function checkProjectileCollisions() {
 }
 
 function checkPlayerProjectileCollisions() {
-    playerProjectiles.forEach((projectile, projectileIndex) => {
+    playerProjectiles.forEach((playerProjectile, projectileIndex) => {
         for (const shipData of enemies) {
             const enemyShip = shipData.enemyShip;
 
             // Check collision between projectile and player ship
-            if (checkCollision(projectile, enemyShip)) {
+            if (checkCollision(playerProjectile, enemyShip)) {
                 // Reduce health by 1
                 enemyShip.userData.health -= 1;
-
+                console.log("*****enemy ship hit. health at :" +enemyShip.userData.health )
                 // Check if the player ship's health is 0
                 if (enemyShip.userData.health <= 0) {
                     // Remove player ship from the scene
@@ -600,13 +601,14 @@ function checkPlayerProjectileCollisions() {
                     enemyShip.material.dispose();
                     world.removeBody(shipData.enemyShipBody);
                     enemies.splice(enemies.indexOf(shipData), 1); // Remove from array
+                    console.log("enemy ship destoryed");
                 }
 
                 // Remove the projectile after hit
-                scene.remove(projectile);
-                projectile.geometry.dispose();
-                projectile.material.dispose();
-                projectiles.splice(projectileIndex, 1); // Remove from the projectile array
+                scene.remove(playerProjectile);
+                playerProjectile.geometry.dispose();
+                playerProjectile.material.dispose();
+                playerProjectiles.splice(projectileIndex, 1); // Remove from the projectile array
 
                 return; // Exit the loop once a hit is processed
             }
