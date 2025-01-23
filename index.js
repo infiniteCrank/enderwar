@@ -115,7 +115,7 @@ playerGate.position.set(0, 500, 0); // Position the player gate at the north pol
 scene.add(playerGate);
 
 // Set camera position
-camera.position.set(0, 50, 50);
+camera.position.set(0, 50, 490);
 camera.lookAt(0, 0, 0);
 
 // Initialize OrbitControls
