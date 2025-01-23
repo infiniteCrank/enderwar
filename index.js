@@ -181,7 +181,12 @@ window.addEventListener('click', (event) => {
 // Movement towards enemy gate on start button click
 let simulationActive = false;
 // Button to start simulation
-document.getElementById('startButton').addEventListener('click', () => {
+var startBtn = document.getElementById('startButton');
+startBtn.addEventListener('click', () => {
+    //disable start button comment this out to debug enemy positions 
+    startBtn.disabled = true;
+
+    //begin the simulation
     simulationActive = true;
 
     spawnEnemyShips(); // Spawn enemy ships when the game starts
@@ -373,6 +378,7 @@ function resetGame() {
       spaceships = [];
       enemies = [];
       simulationActive = false
+      startBtn.disabled = false
     
 }
 
