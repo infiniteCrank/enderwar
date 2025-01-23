@@ -283,7 +283,7 @@ function animate() {
                 enemyShip.lookAt(lookAtTarget);
             }
 
-            if (enemyShip.userData && enemyShip.userData.velocity) {
+            if (enemyShip.userData && enemyShip.userData.velocity && enemyShip.userData.EnemyType === 'aggressive') {
                 enemyShip.position.add(enemyShip.userData.velocity);
 
                 // Check for collision with obstacles
@@ -569,6 +569,11 @@ function checkProjectileCollisions() {
                     world.removeBody(playerShipData.shipBody);
                     spaceships.splice(spaceships.indexOf(playerShipData), 1); // Remove from array
                     console.log("player ship destoryed")
+                    if(spaceships.length === 0){
+                        alert("You lose!");
+                        resetGame();
+                        return;
+                    }
                 }
 
                 // Remove the projectile after hit
@@ -580,7 +585,7 @@ function checkProjectileCollisions() {
                 return; // Exit the loop once a hit is processed
             }
         }
-    });
+    })
 }
 
 function checkPlayerProjectileCollisions() {
