@@ -379,6 +379,7 @@ function resetGame() {
       enemies = [];
       simulationActive = false
       startBtn.disabled = false
+      spawnObstacles(10)
     
 }
 
