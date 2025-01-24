@@ -65,11 +65,12 @@ function createSpaceship(position) {
 
     // Initialize userData to store health and velocity
     spaceship.userData = {
-        health: 5, // Set initial health to 5
+        health: 50, // Set initial health to 5
         velocity: new THREE.Vector3(0, 0, 0),
         playerShip: true,
+        unitMode: UNIT_MODE
     };
-
+    console.log(spaceship.userData)
     spaceships.push({spaceship, shipBody});
     return spaceship;
 }
@@ -131,7 +132,7 @@ window.addEventListener('click', (event) => {
         - (event.clientY / window.innerHeight) * 2 + 1
     );
     // if the user is click start button ignore
-    if (event.target.id === "startButton") {
+    if (event.target.id === "startButton" || event.target.id === "defenceButton" || event.target.id === "offenceButton") {
         return 
     }
     // cant place ships after game start 
@@ -178,6 +179,25 @@ window.addEventListener('click', (event) => {
     }
 });
 
+// this is the player unit mode when placing units 
+let UNIT_MODE = 'offence'
+// button to set defence mode 
+var dendenceBtn = document.getElementById('defenceButton');
+dendenceBtn.addEventListener('click', () => {
+    dendenceBtn.disabled = true
+    offenceBtn.disabled = false
+     UNIT_MODE = 'defence'
+});
+
+// button to set offence mode 
+var offenceBtn = document.getElementById('offenceButton');
+offenceBtn.addEventListener('click', () => {
+    offenceBtn.disabled = true
+    dendenceBtn.disabled = false
+    UNIT_MODE = 'offence'
+});
+
+
 // Movement towards enemy gate on start button click
 let simulationActive = false;
 // Button to start simulation
@@ -220,6 +240,17 @@ function animate() {
 
     if (simulationActive) {
 
+        //check for a draw 
+        if(spaceships.length === 0 && enemies.length === 0){
+            alert("This was a draw");
+            resetGame();
+        }
+        //check for defensive win 
+        if(spaceships.length > 0 && enemies.length === 0){
+            alert("You win!");
+            resetGame();
+        }
+        
         // Update projectiles
         updateProjectiles();
         updatePlayerProjectiles();
@@ -244,7 +275,7 @@ function animate() {
                 spaceship.lookAt(lookAtTarget);
             }
 
-            if (spaceship.userData && spaceship.userData.velocity) {
+            if (spaceship.userData && spaceship.userData.velocity && spaceship.userData.unitMode === 'offence') {
                 spaceship.position.add(spaceship.userData.velocity);
 
 
@@ -334,7 +365,6 @@ function animate() {
                         enemyShip.enemyShip.material.dispose();
                         world.removeBody(enemyShip.enemyShipBody);
                         enemies.splice(enemies.indexOf(enemyShip), 1); // Remove enemy ship from array
-                        console.log("both ships destroyed")
                     }
                 }
             }
@@ -397,7 +427,8 @@ function spawnEnemyShips() {
 
     while (spawnedEnemies < enemyCount) {
 
-        const enemyType = Math.random() < 0.4 ? 'defensive' : 'aggressive'; // Randomly choose enemy type
+        //const enemyType = Math.random() < 0.3 ? 'defensive' : 'aggressive'; // Randomly choose enemy type
+        const enemyType = 'aggressive';
         let enemyShipPosition
         if(enemyType ==="aggressive"){// aggressive types stay on the outside edge 
             // Generate random positions within the sphere radius
@@ -566,7 +597,6 @@ function checkProjectileCollisions() {
             if (checkCollision(projectile, playerShip)) {
                 // Reduce health by 1
                 playerShip.userData.health -= 1;
-                console.log("player ship hit. health at :" +playerShip.userData.health )
                 // Check if the player ship's health is 0
                 if (playerShip.userData.health <= 0) {
                     // Remove player ship from the scene
@@ -575,7 +605,6 @@ function checkProjectileCollisions() {
                     playerShip.material.dispose();
                     world.removeBody(playerShipData.shipBody);
                     spaceships.splice(spaceships.indexOf(playerShipData), 1); // Remove from array
-                    console.log("player ship destoryed")
                     if(spaceships.length === 0){
                         alert("You lose!");
                         resetGame();
@@ -604,7 +633,6 @@ function checkPlayerProjectileCollisions() {
             if (checkCollision(playerProjectile, enemyShip)) {
                 // Reduce health by 1
                 enemyShip.userData.health -= 1;
-                console.log("*****enemy ship hit. health at :" +enemyShip.userData.health )
                 // Check if the player ship's health is 0
                 if (enemyShip.userData.health <= 0) {
                     // Remove player ship from the scene
@@ -613,7 +641,6 @@ function checkPlayerProjectileCollisions() {
                     enemyShip.material.dispose();
                     world.removeBody(shipData.enemyShipBody);
                     enemies.splice(enemies.indexOf(shipData), 1); // Remove from array
-                    console.log("enemy ship destoryed");
                 }
 
                 // Remove the projectile after hit
