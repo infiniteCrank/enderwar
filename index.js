@@ -75,7 +75,7 @@ function createSpaceship(position) {
         playerShip: true,
         unitMode: UNIT_MODE
     };
-    logEvent("You placed a " + UNIT_MODE + " unit at X:" + position.x, " Y:" + position.y + 100 + " Z:" + position.z + " with " + PLAYER_UNIT_HEALTH + "health.");
+    logEvent("You placed a " + UNIT_MODE + " unit at X:" + position.x + " Y:" + position.y + 100 + " Z:" + position.z + " with " + PLAYER_UNIT_HEALTH + " health.");
     spaceships.push({spaceship, shipBody});
     return spaceship;
 }
@@ -101,7 +101,7 @@ function createEnemyShip(position) {
         velocity: new THREE.Vector3(0, 0, 0),
         enemyShip: true
     };
-    logEvent("An enemy unit  spawned at X:" + position.x, " Y:" + position.y + 100 + " Z:" + position.z + " with " + ENEMY_UNIT_HEALTH + "health.");
+    logEvent("An enemy unit  spawned at X:" + position.x + " Y:" + position.y + 100 + " Z:" + position.z + " with " + ENEMY_UNIT_HEALTH + " health.");
     
     enemies.push({enemyShip, enemyShipBody});
     return enemyShip;
@@ -141,7 +141,8 @@ window.addEventListener('click', (event) => {
     if (event.target.id === "startButton" || 
         event.target.id === "defenceButton" || 
         event.target.id === "offenceButton" ||
-        event.target.id === "eventLog"
+        event.target.id === "eventLog" ||
+        event.target.id ==="toggleButton"
     ) {
         return 
     }
@@ -748,3 +749,13 @@ function logEvent(eventMessage) {
     // Optional: Scroll to the bottom of the log to show the latest entry
     logList.scrollTop = logList.scrollHeight;
 }
+
+const toggleButton = document.getElementById('toggleButton');
+const logList = document.getElementById('logList');
+
+toggleButton.addEventListener('click', () => {
+    logList.classList.toggle('hidden'); // Toggle the hidden class
+});
+
+// Optional: Initialize the log content as hidden
+logList.classList.add('hidden'); // Start with the log entries hidden
