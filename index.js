@@ -11,9 +11,14 @@ const TOTAL_ENEMY_SPAWN = 10;
 const RATE_OF_FIRE = 500;
 // projectile rate of fire for enemy 
 const ENEMY_RATE_OF_FIRE = 500;
-
+// max projectile range for player
 const PLAYER_RANGE = 200;
+// max projectile range for enemy
 const ENEMY_RANGE = 200;
+// starting health for player units 
+const PLAYER_UNIT_HEALTH = 50;
+//starting health for enemy units 
+const ENEMY_UNIT_HEALTH = 50;
 
 // Initialize Three.js
 const scene = new THREE.Scene();
@@ -65,12 +70,12 @@ function createSpaceship(position) {
 
     // Initialize userData to store health and velocity
     spaceship.userData = {
-        health: 50, // Set initial health to 5
+        health: PLAYER_UNIT_HEALTH, // Set initial health to 5
         velocity: new THREE.Vector3(0, 0, 0),
         playerShip: true,
         unitMode: UNIT_MODE
     };
-    console.log(spaceship.userData)
+    logEvent("You placed a " + UNIT_MODE + " unit at X:" + position.x, " Y:" + position.y + 100 + " Z:" + position.z + " with " + PLAYER_UNIT_HEALTH + "health.");
     spaceships.push({spaceship, shipBody});
     return spaceship;
 }
@@ -92,10 +97,11 @@ function createEnemyShip(position) {
     world.addBody(enemyShipBody);
 
     enemyShip.userData = {
-        health: 50, 
+        health: ENEMY_UNIT_HEALTH, 
         velocity: new THREE.Vector3(0, 0, 0),
         enemyShip: true
     };
+    logEvent("An enemy unit  spawned at X:" + position.x, " Y:" + position.y + 100 + " Z:" + position.z + " with " + ENEMY_UNIT_HEALTH + "health.");
     
     enemies.push({enemyShip, enemyShipBody});
     return enemyShip;
@@ -132,7 +138,11 @@ window.addEventListener('click', (event) => {
         - (event.clientY / window.innerHeight) * 2 + 1
     );
     // if the user is click start button ignore
-    if (event.target.id === "startButton" || event.target.id === "defenceButton" || event.target.id === "offenceButton") {
+    if (event.target.id === "startButton" || 
+        event.target.id === "defenceButton" || 
+        event.target.id === "offenceButton" ||
+        event.target.id === "eventLog"
+    ) {
         return 
     }
     // cant place ships after game start 
@@ -171,10 +181,11 @@ window.addEventListener('click', (event) => {
            if (spaceships.length < MAX_SHIPS) {
                 createSpaceship(intersectionPoint); // Create a spaceship at the intersection point
             } else {
-                alert("You cannot place more than 10 ships!"); // Feedback when max ship limit is reached
+                logEvent("You cannot place more than 10 ships!");
             }
         } else {
-            alert("You cannot place a ship within " + GATE_RADIUS + " units of the gate!"); // Optional feedback
+            logEvent("You cannot place a ship within " + GATE_RADIUS + " units of the gate!"); // Optional feedback
+            
         }
     }
 });
@@ -208,6 +219,7 @@ startBtn.addEventListener('click', () => {
 
     //begin the simulation
     simulationActive = true;
+    logEvent("Simulation started.");
 
     spawnEnemyShips(); // Spawn enemy ships when the game starts
 
@@ -242,15 +254,21 @@ function animate() {
 
         //check for a draw 
         if(spaceships.length === 0 && enemies.length === 0){
-            alert("This was a draw");
+            logEvent("This was a draw.");
             resetGame();
         }
         //check for defensive win 
         if(spaceships.length > 0 && enemies.length === 0){
-            alert("You win!");
+            logEvent("You win!");
             resetGame();
         }
-        
+        // if you ever have no ships and the other player does you lose 
+        if(spaceships.length === 0 && enemies.length > 0){
+            logEvent("You lose.");
+            resetGame();
+            return;
+        }
+
         // Update projectiles
         updateProjectiles();
         updatePlayerProjectiles();
@@ -299,7 +317,7 @@ function animate() {
 
             // Collision check with the enemy gate
             if (checkCollision(spaceship, enemyGate)) {
-                alert("You win!");
+                logEvent("You win!");
                 resetGame();
                 return;
             }
@@ -342,7 +360,7 @@ function animate() {
 
             // Check for enemy ship collisions with the player gate
             if (checkCollision(enemyShip, playerGate)) {
-                alert("You lose!");
+                logEvent("You lose.");
                 resetGame();
                 return;
             }
@@ -427,8 +445,8 @@ function spawnEnemyShips() {
 
     while (spawnedEnemies < enemyCount) {
 
-        //const enemyType = Math.random() < 0.3 ? 'defensive' : 'aggressive'; // Randomly choose enemy type
-        const enemyType = 'aggressive';
+        const enemyType = Math.random() < 0.5 ? 'defensive' : 'aggressive'; // Randomly choose enemy type
+        logEvent("AI choose " + enemyType + " for the next unit.")
         let enemyShipPosition
         if(enemyType ==="aggressive"){// aggressive types stay on the outside edge 
             // Generate random positions within the sphere radius
@@ -462,7 +480,6 @@ function spawnEnemyShips() {
             // Set enemy ship's moving velocity in userData for future updates
             enemyShip.userData.velocity = directionToGate.multiplyScalar(0.5); // Adjust speed as desired
             enemyShip.userData.EnemyType = enemyType;
-            console.log(enemyType);
             spawnedEnemies++; // Increment the count of spawned enemies
         } 
     }
@@ -605,11 +622,6 @@ function checkProjectileCollisions() {
                     playerShip.material.dispose();
                     world.removeBody(playerShipData.shipBody);
                     spaceships.splice(spaceships.indexOf(playerShipData), 1); // Remove from array
-                    if(spaceships.length === 0){
-                        alert("You lose!");
-                        resetGame();
-                        return;
-                    }
                 }
 
                 // Remove the projectile after hit
@@ -641,6 +653,7 @@ function checkPlayerProjectileCollisions() {
                     enemyShip.material.dispose();
                     world.removeBody(shipData.enemyShipBody);
                     enemies.splice(enemies.indexOf(shipData), 1); // Remove from array
+                    logEvent("1 enemy "+enemyShip.userData.EnemyType+" ship defeated");
                 }
 
                 // Remove the projectile after hit
@@ -698,4 +711,40 @@ function steerAroundObstacle(spaceship, obstacle) {
     
     // Adjust the spaceship's velocity to move around the obstacle
     spaceship.userData.velocity = perpendicularDirection.multiplyScalar(0.5); // Adjust speed as needed
+}
+
+const logElement = document.getElementById('eventLog');
+
+let isDragging = false;
+let startX, startY, initialMouseX, initialMouseY;
+
+logElement.addEventListener('mousedown', (event) => {
+    isDragging = true;
+    startX = logElement.offsetLeft;
+    startY = logElement.offsetTop;
+    initialMouseX = event.clientX;
+    initialMouseY = event.clientY;
+});
+
+document.addEventListener('mousemove', (event) => {
+    if (isDragging) {
+        const dx = event.clientX - initialMouseX;
+        const dy = event.clientY - initialMouseY;
+        logElement.style.left = startX + dx + 'px';
+        logElement.style.top = startY + dy + 'px';
+    }
+});
+
+document.addEventListener('mouseup', () => {
+    isDragging = false;
+});
+
+function logEvent(eventMessage) {
+    const logList = document.getElementById('logList');
+    const newLogEntry = document.createElement('li');
+    newLogEntry.textContent = eventMessage;
+    logList.appendChild(newLogEntry);
+    
+    // Optional: Scroll to the bottom of the log to show the latest entry
+    logList.scrollTop = logList.scrollHeight;
 }

@@ -26,12 +26,34 @@
             top: 20px; 
             left: 100px;
         }
+        .event-log {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            height: 400px; /* Set fixed height to enforce scrolling */
+            background-color: rgba(0, 0, 0, 0.7); /* Semi-transparent background */
+            color: white;
+            border: 1px solid white;
+            padding: 10px;
+            overflow-y: auto; /* Enables vertical scrollbar when overflowing */
+            cursor: move; /* Change cursor to indicate draggable */
+            z-index: 1000; /* Ensure the log appears on top of other elements */
+        }
+
+        h3 {
+            margin: 0 0 10px; /* Margin adjustments for better spacing */
+        }
     </style>
 </head>
 <body>
     <button id="startButton">Start</button>
     <button id="defenceButton" disabled>Defence Mode</button>
     <button id="offenceButton">Offence Mode</button>
+    <div id="eventLog" class="event-log">
+        <h3>Event Log</h3>
+        <ul id="logList"></ul>
+    </div>
   <!-- Three.js CDN -->
   <script type="importmap">
     {
