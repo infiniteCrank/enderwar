@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { OrbitControls } from "addons";
+import { OrbitControls, GLTFLoader } from "addons";
 
 // the minimum distance away from teh gate a unit can be placed 
 const GATE_RADIUS = 800;
@@ -54,30 +54,34 @@ world.gravity.set(0, 0, -9.82); // Gravity
 // Array to hold created spaceships
 let spaceships = [];
 
-// Modify the spaceship creation function to include health
+// Initialize GLTFLoader
+const loader = new GLTFLoader();
+
+// Modify the spaceship creation function to include health and swap with GLTF model
 function createSpaceship(position) {
-    const shipGeometry = new THREE.BoxGeometry(40, 40, 40);
-    const shipMaterial = new THREE.MeshPhongMaterial({ color: 0xff00ff });
-    const spaceship = new THREE.Mesh(shipGeometry, shipMaterial);
-    spaceship.position.set(position.x, position.y + 5, position.z);
-    scene.add(spaceship);
+    // Load GLTF model
+    loader.load('ship1.glb', (gltf) => {
+        const spaceship = gltf.scene; // Use the loaded scene from glTF
+        spaceship.position.set(position.x, position.y + 5, position.z);
+        spaceship.scale.set(10, 10, 10); // Adjust scale if necessary
+        scene.add(spaceship);
 
-    const shipShape = new CANNON.Box(new CANNON.Vec3(40, 40, 40));
-    const shipBody = new CANNON.Body({ mass: 1 });
-    shipBody.addShape(shipShape);
-    shipBody.position.set(position.x, position.y + 100, position.z);
-    world.addBody(shipBody);
+        const shipShape = new CANNON.Box(new CANNON.Vec3(20, 20, 20)); // Adjust size if necessary
+        const shipBody = new CANNON.Body({ mass: 1 });
+        shipBody.addShape(shipShape);
+        shipBody.position.set(position.x, position.y + 100, position.z);
+        world.addBody(shipBody);
 
-    // Initialize userData to store health and velocity
-    spaceship.userData = {
-        health: PLAYER_UNIT_HEALTH, // Set initial health to 5
-        velocity: new THREE.Vector3(0, 0, 0),
-        playerShip: true,
-        unitMode: UNIT_MODE
-    };
-    logEvent("You placed a " + UNIT_MODE + " unit at X:" + position.x + " Y:" + position.y + 100 + " Z:" + position.z + " with " + PLAYER_UNIT_HEALTH + " health.", false);
-    spaceships.push({spaceship, shipBody});
-    return spaceship;
+        // Initialize userData to store health and velocity
+        spaceship.userData = {
+            health: PLAYER_UNIT_HEALTH, // Set initial health to PLAYER_UNIT_HEALTH
+            velocity: new THREE.Vector3(0, 0, 0),
+            playerShip: true,
+            unitMode: UNIT_MODE
+        };
+        logEvent("You placed a " + UNIT_MODE + " unit at X:" + position.x + " Y:" + position.y + 100 + " Z:" + position.z + " with " + PLAYER_UNIT_HEALTH + " health.", false);
+        spaceships.push({ spaceship, shipBody });
+    });
 }
 
 // Array to hold created spaceships
