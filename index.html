@@ -47,7 +47,10 @@
         }
 
         ul {
-            display: block; /* Ensure list is displayed normally */
+            max-height: 350px; /* Set a max height for the log entries */
+            overflow-y: auto; /* Enable vertical scrolling */
+            padding: 0; /* Remove default padding */
+            margin: 0; /* Remove default margin */
         }
 
         .hidden {
