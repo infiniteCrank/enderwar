@@ -146,7 +146,8 @@ window.addEventListener('click', (event) => {
         event.target.id === "defenceButton" || 
         event.target.id === "offenceButton" ||
         event.target.id === "eventLog" ||
-        event.target.id ==="toggleButton"
+        event.target.id === "toggleButton" ||
+        event.target.classList.contains("noClick")
     ) {
         return 
     }
@@ -165,8 +166,6 @@ window.addEventListener('click', (event) => {
         // if a spaceship was clicked on remove it 
         if(hasClickedOnShip.length > 0){
             scene.remove(spaceship);
-            spaceship.geometry.dispose();
-            spaceship.material.dispose();
             world.removeBody(shipBody);
             spaceships.splice(spaceShipindex,1)
             return
@@ -378,8 +377,6 @@ function animate() {
                     enemyShip.enemyShip.userData.health -= 1; // Enemy takes damage
                     if (enemyShip.enemyShip.userData.health <= 0) {
                         scene.remove(playerShip.spaceship);
-                        playerShip.spaceship.geometry.dispose();
-                        playerShip.spaceship.material.dispose();
                         world.removeBody(playerShip.shipBody);
                         spaceships.splice(spaceships.indexOf(playerShip), 1); // Remove player ship from array
 
@@ -413,7 +410,7 @@ function resetGame() {
         );
       });
     
-      // Clean up Three.js objects first
+      // this mostly will only end up cleaning up projectiles now 
       objectsToRemove.forEach((object) => {
         if (object.geometry) object.geometry.dispose();
         if (object.material) object.material.dispose();
@@ -428,6 +425,12 @@ function resetGame() {
     
         scene.remove(object);
       });
+      
+      // remove loaded player ship models 
+      for (const playerShip of spaceships) {
+        scene.remove(playerShip.spaceship)
+        world.remove(playerShip.shipBody)
+      }
       spaceships = [];
       enemies = [];
       simulationActive = false
@@ -623,8 +626,6 @@ function checkProjectileCollisions() {
                 if (playerShip.userData.health <= 0) {
                     // Remove player ship from the scene
                     scene.remove(playerShip);
-                    playerShip.geometry.dispose();
-                    playerShip.material.dispose();
                     world.removeBody(playerShipData.shipBody);
                     spaceships.splice(spaceships.indexOf(playerShipData), 1); // Remove from array
                 }
@@ -747,6 +748,7 @@ document.addEventListener('mouseup', () => {
 function logEvent(eventMessage, toggleLogOpen) {
     const logList = document.getElementById('logList');
     const newLogEntry = document.createElement('li');
+    newLogEntry.classList.add("noClick")
     newLogEntry.textContent = eventMessage;
     logList.appendChild(newLogEntry);
     
