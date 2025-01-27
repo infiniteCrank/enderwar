@@ -19,6 +19,10 @@ const ENEMY_RANGE = 200;
 const PLAYER_UNIT_HEALTH = 50;
 //starting health for enemy units 
 const ENEMY_UNIT_HEALTH = 50;
+// Enemy Speed to gate 
+const ENEMY_SPEED = 0.5;
+//Player Unit Speed to gate 
+const PLAYER_SPEED = 0.1;
 
 // Initialize Three.js
 const scene = new THREE.Scene();
@@ -323,7 +327,7 @@ function animate() {
                 // Continue movement towards the gates after steering
                 const gatePosition = enemyGate.position.clone();
                 const directionToGate = gatePosition.clone().sub(spaceship.position).normalize();
-                spaceship.userData.velocity.add(directionToGate.multiplyScalar(0.1)); // Adjust speed for a smoother approach
+                spaceship.userData.velocity.add(directionToGate.multiplyScalar(PLAYER_SPEED)); // Adjust speed for a smoother approach
                 spaceship.userData.velocity.normalize(); // Normalize to keep consistent speed
             }
 
@@ -491,7 +495,7 @@ async function spawnEnemyShips() {
             // Calculate direction to player gate
             directionToGate = playerGate.position.clone().sub(enemyShip.position).normalize();
             // Set enemy ship's moving velocity in userData for future updates
-            enemyShip.userData.velocity = directionToGate.multiplyScalar(0.5); // Adjust speed as desired
+            enemyShip.userData.velocity = directionToGate.multiplyScalar(ENEMY_SPEED); // Adjust speed as desired
             enemyShip.userData.EnemyType = enemyType;
             
             spawnedEnemies++; // Increment the count of spawned enemies
