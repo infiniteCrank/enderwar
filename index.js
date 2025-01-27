@@ -688,23 +688,26 @@ function checkPlayerProjectileCollisions() {
     });
 }
 
-// Function to create obstacles
+// Function to create obstacles using a GLB model
 function createObstacle(position) {
-    const obstacleGeometry = new THREE.BoxGeometry(50, 50, 50); // Adjust size as needed
-    const obstacleMaterial = new THREE.MeshPhongMaterial({ color: 0x888888 }); // Grey color for obstacles
-    const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
-    obstacle.position.copy(position);
-    scene.add(obstacle);
+    loader.load('meteor.glb', (gltf) => {
+        const obstacle = gltf.scene; // Use the loaded scene from glTF
+        obstacle.position.copy(position);
+        obstacle.scale.set(20, 20, 20); // Adjust the scale if necessary
+        scene.add(obstacle);
 
-    const obstacleShape = new CANNON.Box(new CANNON.Vec3(50/2, 50/2, 50/2)); // Physics shape
-    const obstacleBody = new CANNON.Body({ mass: 0 }); // Static obstacle
-    obstacleBody.addShape(obstacleShape);
-    obstacleBody.position.copy(position);
-    world.addBody(obstacleBody);
+        const obstacleShape = new CANNON.Box(new CANNON.Vec3(25, 25, 25)); // Adjust size as needed
+        const obstacleBody = new CANNON.Body({ mass: 0 }); // Static obstacle
+        obstacleBody.addShape(obstacleShape);
+        obstacleBody.position.copy(position);
+        world.addBody(obstacleBody);
+    }, undefined, (error) => {
+        console.error("An error occurred while loading the obstacle model: ", error);
+    });
 }
 
 // Function to spawn obstacles
-function spawnObstacles(count) {
+async function spawnObstacles(count) {
     for (let i = 0; i < count; i++) {
         const randomX = (Math.random() - 0.5) * 800; // Adjust range
         const randomY = (Math.random() - 0.5) * 800; // Adjust range
@@ -716,7 +719,7 @@ function spawnObstacles(count) {
         const distanceToEnemyGate = position.distanceTo(enemyGate.position);
 
         if (distanceToPlayerGate > 200 && distanceToEnemyGate > 200) {
-            createObstacle(position);
+            await createObstacle(position);
         }
     }
 }
