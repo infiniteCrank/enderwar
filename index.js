@@ -441,6 +441,12 @@ function resetGame() {
         scene.remove(playerShip.spaceship)
         world.remove(playerShip.shipBody)
       }
+
+    // remove loaded player ship models 
+    for (const enemyShip of enemies) {
+        scene.remove(enemyShip.enemyShip)
+        world.remove(enemyShip.enemyShipBody)
+    }
       spaceships = [];
       enemies = [];
       simulationActive = false
