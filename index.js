@@ -88,27 +88,33 @@ function createSpaceship(position) {
 let enemies = [];
 // Function to create an enemy spaceship
 function createEnemyShip(position) {
-    const enemyShipGeometry = new THREE.BoxGeometry(40, 40, 40);
-    const enemyShipMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
-    const enemyShip = new THREE.Mesh(enemyShipGeometry, enemyShipMaterial);
-    enemyShip.position.set(position.x, position.y, position.z);
-    scene.add(enemyShip);
+    return new Promise((resolve, reject) => {
+        loader.load('ship2.glb', (gltf) => {
+            const enemyShip = gltf.scene; // Use the loaded scene from glTF
+            enemyShip.position.set(position.x, position.y + 5, position.z);
+            enemyShip.scale.set(10, 10, 10); // Adjust scale if necessary
+            scene.add(enemyShip);
 
-    const enemyShipShape = new CANNON.Box(new CANNON.Vec3(40, 40, 40));
-    const enemyShipBody = new CANNON.Body({ mass: 1 });
-    enemyShipBody.addShape(enemyShipShape);
-    enemyShipBody.position.set(position.x, position.y + 100, position.z);
-    world.addBody(enemyShipBody);
+            const enemyShipShape = new CANNON.Box(new CANNON.Vec3(40, 40, 40));
+            const enemyShipBody = new CANNON.Body({ mass: 1 });
+            enemyShipBody.addShape(enemyShipShape);
+            enemyShipBody.position.set(position.x, position.y + 100, position.z);
+            world.addBody(enemyShipBody);
 
-    enemyShip.userData = {
-        health: ENEMY_UNIT_HEALTH, 
-        velocity: new THREE.Vector3(0, 0, 0),
-        enemyShip: true
-    };
-    logEvent("An enemy unit  spawned at X:" + position.x + " Y:" + position.y + 100 + " Z:" + position.z + " with " + ENEMY_UNIT_HEALTH + " health.", false);
-    
-    enemies.push({enemyShip, enemyShipBody});
-    return enemyShip;
+            enemyShip.userData = {
+                health: ENEMY_UNIT_HEALTH, 
+                velocity: new THREE.Vector3(0, 0, 0),
+                enemyShip: true
+            };
+            logEvent("An enemy unit  spawned at X:" + position.x + " Y:" + position.y + 100 + " Z:" + position.z + " with " + ENEMY_UNIT_HEALTH + " health.", false);
+            
+            enemies.push({enemyShip, enemyShipBody});
+            resolve(enemyShip);
+        });
+    }, undefined, (error) => {
+        console.error("An error happened while loading the enemy ship model: ", error);
+        reject(error); // Reject the promise on error
+    });
 }
 
 // Create the enemy gate at the south pole
@@ -217,15 +223,15 @@ offenceBtn.addEventListener('click', () => {
 let simulationActive = false;
 // Button to start simulation
 var startBtn = document.getElementById('startButton');
-startBtn.addEventListener('click', () => {
+startBtn.addEventListener('click', async () => {
     //disable start button comment this out to debug enemy positions 
     startBtn.disabled = true;
 
+    await spawnEnemyShips(); // Spawn enemy ships when the game starts
+    
+    logEvent("Simulation started.", true);
     //begin the simulation
     simulationActive = true;
-    logEvent("Simulation started.", true);
-
-    spawnEnemyShips(); // Spawn enemy ships when the game starts
 
     // Move all spaceships towards the gate
     for (const spaceshipData of spaceships) {
@@ -260,11 +266,13 @@ function animate() {
         if(spaceships.length === 0 && enemies.length === 0){
             logEvent("This was a draw.", true);
             resetGame();
+            return;
         }
         //check for defensive win 
         if(spaceships.length > 0 && enemies.length === 0){
             logEvent("You win!", true);
             resetGame();
+            return;
         }
         // if you ever have no ships and the other player does you lose 
         if(spaceships.length === 0 && enemies.length > 0){
@@ -381,8 +389,6 @@ function animate() {
                         spaceships.splice(spaceships.indexOf(playerShip), 1); // Remove player ship from array
 
                         scene.remove(enemyShip.enemyShip);
-                        enemyShip.enemyShip.geometry.dispose();
-                        enemyShip.enemyShip.material.dispose();
                         world.removeBody(enemyShip.enemyShipBody);
                         enemies.splice(enemies.indexOf(enemyShip), 1); // Remove enemy ship from array
                     }
@@ -447,7 +453,7 @@ function checkCollision(objectA, objectB) {
 }
 
 // Function to spawn enemy ships
-function spawnEnemyShips() {
+async function spawnEnemyShips() {
     const enemyCount = TOTAL_ENEMY_SPAWN; // Number of enemy ships to spawn
     let spawnedEnemies = 0; // Track how many enemy ships have been successfully spawned
 
@@ -480,14 +486,14 @@ function spawnEnemyShips() {
 
         // Only spawn if the distance is greater than the defined threshold
         if (distanceToGate > GATE_RADIUS) {
-            const enemyShip = createEnemyShip(enemyShipPosition); // Create the enemy ship
-            
+            let directionToGate
+            const enemyShip = await createEnemyShip(enemyShipPosition)
             // Calculate direction to player gate
-            const directionToGate = playerGate.position.clone().sub(enemyShip.position).normalize();
-
+            directionToGate = playerGate.position.clone().sub(enemyShip.position).normalize();
             // Set enemy ship's moving velocity in userData for future updates
             enemyShip.userData.velocity = directionToGate.multiplyScalar(0.5); // Adjust speed as desired
             enemyShip.userData.EnemyType = enemyType;
+            
             spawnedEnemies++; // Increment the count of spawned enemies
         } 
     }
@@ -655,8 +661,6 @@ function checkPlayerProjectileCollisions() {
                 if (enemyShip.userData.health <= 0) {
                     // Remove player ship from the scene
                     scene.remove(enemyShip);
-                    enemyShip.geometry.dispose();
-                    enemyShip.material.dispose();
                     world.removeBody(shipData.enemyShipBody);
                     enemies.splice(enemies.indexOf(shipData), 1); // Remove from array
                     logEvent("1 enemy "+enemyShip.userData.EnemyType+" ship defeated", false);
