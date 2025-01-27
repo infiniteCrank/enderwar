@@ -83,7 +83,7 @@ function createSpaceship(position) {
             playerShip: true,
             unitMode: UNIT_MODE
         };
-        logEvent("You placed a " + UNIT_MODE + " unit at X:" + position.x + " Y:" + position.y + 100 + " Z:" + position.z + " with " + PLAYER_UNIT_HEALTH + " health.", false);
+        logEvent("You placed a " + UNIT_MODE + " unit at X:" + position.x + " Y:" + position.y + 100 + " Z:" + position.z + " with " + PLAYER_UNIT_HEALTH + " health.", false, false);
         spaceships.push({ spaceship, shipBody });
     });
 }
@@ -110,7 +110,7 @@ function createEnemyShip(position) {
                 velocity: new THREE.Vector3(0, 0, 0),
                 enemyShip: true
             };
-            logEvent("An enemy unit  spawned at X:" + position.x + " Y:" + position.y + 100 + " Z:" + position.z + " with " + ENEMY_UNIT_HEALTH + " health.", false);
+            logEvent("An enemy unit  spawned at X:" + position.x + " Y:" + position.y + 100 + " Z:" + position.z + " with " + ENEMY_UNIT_HEALTH + " health.", false,false);
             
             enemies.push({enemyShip, enemyShipBody});
             resolve(enemyShip);
@@ -195,10 +195,10 @@ window.addEventListener('click', (event) => {
            if (spaceships.length < MAX_SHIPS) {
                 createSpaceship(intersectionPoint); // Create a spaceship at the intersection point
             } else {
-                logEvent("You cannot place more than 10 ships!", true);
+                logEvent("You cannot place more than 10 ships!", true, true);
             }
         } else {
-            logEvent("You cannot place a ship within " + GATE_RADIUS + " units of the gate!",true); // Optional feedback
+            logEvent("You cannot place a ship within " + GATE_RADIUS + " units of the gate!",true, true); // Optional feedback
             
         }
     }
@@ -233,7 +233,7 @@ startBtn.addEventListener('click', async () => {
 
     await spawnEnemyShips(); // Spawn enemy ships when the game starts
     
-    logEvent("Simulation started.", true);
+    logEvent("Simulation started.", true, true);
     //begin the simulation
     simulationActive = true;
 
@@ -268,19 +268,19 @@ function animate() {
 
         //check for a draw 
         if(spaceships.length === 0 && enemies.length === 0){
-            logEvent("This was a draw.", true);
+            logEvent("This was a draw.", true, true);
             resetGame();
             return;
         }
         //check for defensive win 
         if(spaceships.length > 0 && enemies.length === 0){
-            logEvent("You win!", true);
+            logEvent("You win!", true, true);
             resetGame();
             return;
         }
         // if you ever have no ships and the other player does you lose 
         if(spaceships.length === 0 && enemies.length > 0){
-            logEvent("You lose.", true);
+            logEvent("You lose.", true, true);
             resetGame();
             return;
         }
@@ -333,7 +333,7 @@ function animate() {
 
             // Collision check with the enemy gate
             if (checkCollision(spaceship, enemyGate)) {
-                logEvent("You win!", true);
+                logEvent("You win!", true, true);
                 resetGame();
                 return;
             }
@@ -376,7 +376,7 @@ function animate() {
 
             // Check for enemy ship collisions with the player gate
             if (checkCollision(enemyShip, playerGate)) {
-                logEvent("You lose.",true);
+                logEvent("You lose.",true, true);
                 resetGame();
                 return;
             }
@@ -464,7 +464,7 @@ async function spawnEnemyShips() {
     while (spawnedEnemies < enemyCount) {
 
         const enemyType = Math.random() < 0.5 ? 'defensive' : 'aggressive'; // Randomly choose enemy type
-        logEvent("AI choose " + enemyType + " for the next unit.", false)
+        logEvent("AI choose " + enemyType + " for the next unit.", false, false)
         let enemyShipPosition
         if(enemyType ==="aggressive"){// aggressive types stay on the outside edge 
             // Generate random positions within the sphere radius
@@ -667,7 +667,7 @@ function checkPlayerProjectileCollisions() {
                     scene.remove(enemyShip);
                     world.removeBody(shipData.enemyShipBody);
                     enemies.splice(enemies.indexOf(shipData), 1); // Remove from array
-                    logEvent("1 enemy "+enemyShip.userData.EnemyType+" ship defeated", false);
+                    logEvent("1 enemy "+enemyShip.userData.EnemyType+" ship defeated", false, false);
                 }
 
                 // Remove the projectile after hit
@@ -753,10 +753,13 @@ document.addEventListener('mouseup', () => {
     isDragging = false;
 });
 
-function logEvent(eventMessage, toggleLogOpen) {
+function logEvent(eventMessage, toggleLogOpen, highlight) {
     const logList = document.getElementById('logList');
     const newLogEntry = document.createElement('li');
     newLogEntry.classList.add("noClick")
+    if(highlight){
+        newLogEntry.classList.add("highlight")
+    }
     newLogEntry.textContent = eventMessage;
     logList.appendChild(newLogEntry);
     
@@ -777,6 +780,3 @@ const logList = document.getElementById('logList');
 toggleButton.addEventListener('click', () => {
     logList.classList.toggle('hidden'); // Toggle the hidden class
 });
-
-// Optional: Initialize the log content as hidden
-logList.classList.add('hidden'); // Start with the log entries hidden
