@@ -27,20 +27,24 @@ const PLAYER_SPEED = 0.1;
 // Initialize Three.js
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+logEvent("create new scene and camera.", false, false);
 
 // Create renderer
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+logEvent("create new webGL renderer.", false, false);
 
 // Add ambient light
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
+logEvent("create ambient light.", false, false);
 
 // Add directional light
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 directionalLight.position.set(1, 1, 1);
 scene.add(directionalLight);
+logEvent("create directional light.", false, false);
 
 // Create a sphere representing space
 const spaceGeometry = new THREE.SphereGeometry(500, 32, 32);
@@ -50,16 +54,47 @@ const spaceMaterial = new THREE.MeshBasicMaterial({
 });
 const spaceSphere = new THREE.Mesh(spaceGeometry, spaceMaterial);
 scene.add(spaceSphere);
+logEvent("create space sphere.", false, false);
 
 // Initialize Cannon.js
 const world = new CANNON.World();
 world.gravity.set(0, 0, -9.82); // Gravity
-
-// Array to hold created spaceships
-let spaceships = [];
+logEvent("create new physics world.", false, false);
 
 // Initialize GLTFLoader
 const loader = new GLTFLoader();
+logEvent("Initialize mesh loader.", false, false);
+
+// Create the enemy gate at the south pole
+const gateGeometry = new THREE.BoxGeometry(100, 200, 100); // 20 x 40 x 20 gate
+const gateMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 }); // Red material for gate
+const enemyGate = new THREE.Mesh(gateGeometry, gateMaterial);
+enemyGate.position.set(0, -500, 0); // Position the gate at the south pole
+scene.add(enemyGate);
+logEvent("create enemy gate.", false, false);
+
+// Create the player gate at the north pole
+const playerGateGeometry = new THREE.BoxGeometry(100, 200, 100); // Size of the player gate
+const playerGateMaterial = new THREE.MeshPhongMaterial({ color: 0x0000ff }); // Blue material for player gate
+const playerGate = new THREE.Mesh(playerGateGeometry, playerGateMaterial);
+playerGate.position.set(0, 500, 0); // Position the player gate at the north pole
+scene.add(playerGate);
+logEvent("Create player gate.", false, false);
+
+// Set camera position
+camera.position.set(0, 50, 490);
+camera.lookAt(0, 0, 0);
+logEvent("Set camera position.", false, false);
+
+// Initialize OrbitControls
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableZoom = true; 
+controls.target.set(0, 0, 0); 
+controls.update();
+logEvent("Initialize orbit controls.", false, false);
+
+// Array to hold created spaceships
+let spaceships = [];
 
 // Modify the spaceship creation function to include health and swap with GLTF model
 function createSpaceship(position) {
@@ -121,30 +156,6 @@ function createEnemyShip(position) {
     });
 }
 
-// Create the enemy gate at the south pole
-const gateGeometry = new THREE.BoxGeometry(100, 200, 100); // 20 x 40 x 20 gate
-const gateMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 }); // Red material for gate
-const enemyGate = new THREE.Mesh(gateGeometry, gateMaterial);
-enemyGate.position.set(0, -500, 0); // Position the gate at the south pole
-scene.add(enemyGate);
-
-// Create the player gate at the north pole
-const playerGateGeometry = new THREE.BoxGeometry(100, 200, 100); // Size of the player gate
-const playerGateMaterial = new THREE.MeshPhongMaterial({ color: 0x0000ff }); // Blue material for player gate
-const playerGate = new THREE.Mesh(playerGateGeometry, playerGateMaterial);
-playerGate.position.set(0, 500, 0); // Position the player gate at the north pole
-scene.add(playerGate);
-
-// Set camera position
-camera.position.set(0, 50, 490);
-camera.lookAt(0, 0, 0);
-
-// Initialize OrbitControls
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableZoom = true; 
-controls.target.set(0, 0, 0); 
-controls.update();
-
 // Update the mouse click event listener
 window.addEventListener('click', (event) => {
     const mouse = new THREE.Vector2(
@@ -178,6 +189,7 @@ window.addEventListener('click', (event) => {
             scene.remove(spaceship);
             world.removeBody(shipBody);
             spaceships.splice(spaceShipindex,1)
+            logEvent("removed the following unit:" + spaceship, false, false);
             return
         }
     }
@@ -212,6 +224,7 @@ dendenceBtn.addEventListener('click', () => {
     dendenceBtn.disabled = true
     offenceBtn.disabled = false
      UNIT_MODE = 'defence'
+     logEvent("Defence Enabled.", true, true);
 });
 
 // button to set offence mode 
@@ -220,6 +233,7 @@ offenceBtn.addEventListener('click', () => {
     offenceBtn.disabled = true
     dendenceBtn.disabled = false
     UNIT_MODE = 'offence'
+    logEvent("Offence Enabled.", true, true);
 });
 
 
@@ -247,6 +261,7 @@ startBtn.addEventListener('click', async () => {
         // Set a velocity for the spaceship (adjust speed as desired)
         spaceship.userData.velocity = direction.multiplyScalar(0.5); // Speed multiplier to control movement
     }
+    logEvent("All offensive player ships now moving toward enemy gate.", true, true);
 });
 
 // Handle window resizing
@@ -259,6 +274,7 @@ window.addEventListener('resize', () => {
 
     // Update renderer size
     renderer.setSize(window.innerWidth, window.innerHeight);
+    logEvent("Window resized to size W:"+window.innerWidth + " H:"+window.innerHeight, true, true);
 });
 
 function animate() {
@@ -284,6 +300,9 @@ function animate() {
             resetGame();
             return;
         }
+
+        // Check if we need to convert a defensive enemy to aggressive
+        checkAndChangeEnemyToAggressive()
 
         // Update projectiles
         updateProjectiles();
@@ -319,6 +338,7 @@ function animate() {
                         child !== playerGate && child !== enemyGate) {
                         
                         if (checkCollision(spaceship, child)) {
+                            logEvent("1 player ship hit an astroid. " + child, false, false);
                             // If a collision is detected, redirect the ship
                             steerAroundObstacle(spaceship, child);
                         }
@@ -362,6 +382,7 @@ function animate() {
                         child !== playerGate && child !== enemyGate) {
                         
                         if (checkCollision(enemyShip, child)) {
+                            logEvent("1 enemy ship hit an astroid. " + child, false, false);
                             // If a collision is detected, redirect the ship
                             steerAroundObstacle(enemyShip, child);
                         }
@@ -395,6 +416,8 @@ function animate() {
                         scene.remove(enemyShip.enemyShip);
                         world.removeBody(enemyShip.enemyShipBody);
                         enemies.splice(enemies.indexOf(enemyShip), 1); // Remove enemy ship from array
+
+                        logEvent("A player and enemy ship have crashed.", false, false);
                     }
                 }
             }
@@ -644,6 +667,7 @@ function checkProjectileCollisions() {
                     scene.remove(playerShip);
                     world.removeBody(playerShipData.shipBody);
                     spaceships.splice(spaceships.indexOf(playerShipData), 1); // Remove from array
+                    logEvent("1 player " + playerShip.userData.unitMode + " ship defeated", false, false);
                 }
 
                 // Remove the projectile after hit
@@ -789,3 +813,24 @@ const logList = document.getElementById('logList');
 toggleButton.addEventListener('click', () => {
     logList.classList.toggle('hidden'); // Toggle the hidden class
 });
+
+// Function to check if there are any aggressive enemies left
+function checkAndChangeEnemyToAggressive() {
+    let aggressiveCount = 0;
+    for (const enemy of enemies) {
+        if (enemy.enemyShip.userData.EnemyType === 'aggressive') {
+            aggressiveCount++;
+        }
+    }
+
+    // If no aggressive units left, change one defensive unit to aggressive
+    if (aggressiveCount === 0) {
+        for (const enemy of enemies) {
+            if (enemy.enemyShip.userData.EnemyType === 'defensive') {
+                enemy.enemyShip.userData.EnemyType = 'aggressive'; // Change defensive to aggressive
+                logEvent("One enemy ship changed from defensive to aggressive.", true, false);
+                break; // Change only one unit and exit the loop
+            }
+        }
+    }
+}
