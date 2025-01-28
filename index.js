@@ -298,6 +298,8 @@ function animate() {
         if(spaceships.length > 0 && enemies.length === 0){
             logEvent("You win!", true, true);
             resetGame();
+            waveNumber ++;
+            document.getElementById('waveNumber').innerHTML="Wave: " + waveNumber;
             return;
         }
         // if you ever have no ships and the other player does you lose 
@@ -359,6 +361,8 @@ function animate() {
             // Collision check with the enemy gate
             if (checkCollision(spaceship, enemyGate)) {
                 logEvent("You win!", true, true);
+                waveNumber ++;
+                document.getElementById('waveNumber').innerHTML="Wave: " + waveNumber;
                 resetGame();
                 return;
             }
