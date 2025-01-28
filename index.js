@@ -17,12 +17,18 @@ const PLAYER_RANGE = 200;
 const ENEMY_RANGE = 200;
 // starting health for player units 
 const PLAYER_UNIT_HEALTH = 50;
-//starting health for enemy units 
+// starting health for enemy units 
 const ENEMY_UNIT_HEALTH = 50;
 // Enemy Speed to gate 
 const ENEMY_SPEED = 0.5;
-//Player Unit Speed to gate 
+// Player Unit Speed to gate 
 const PLAYER_SPEED = 0.1;
+// player Gold 
+let playerGold = 0;
+// enemy gold
+let enemyGold = 0;
+// wave number 
+let waveNumber = 1;
 
 // Initialize Three.js
 const scene = new THREE.Scene();
@@ -338,7 +344,6 @@ function animate() {
                         child !== playerGate && child !== enemyGate) {
                         
                         if (checkCollision(spaceship, child)) {
-                            logEvent("1 player ship hit an astroid. " + child, false, false);
                             // If a collision is detected, redirect the ship
                             steerAroundObstacle(spaceship, child);
                         }
@@ -382,7 +387,6 @@ function animate() {
                         child !== playerGate && child !== enemyGate) {
                         
                         if (checkCollision(enemyShip, child)) {
-                            logEvent("1 enemy ship hit an astroid. " + child, false, false);
                             // If a collision is detected, redirect the ship
                             steerAroundObstacle(enemyShip, child);
                         }
@@ -418,6 +422,10 @@ function animate() {
                         enemies.splice(enemies.indexOf(enemyShip), 1); // Remove enemy ship from array
 
                         logEvent("A player and enemy ship have crashed.", false, false);
+                        playerGold += 5;
+                        enemyGold += 5;
+                        document.getElementById("playerGold").innerHTML = "Player Gold: " + playerGold;
+                        document.getElementById("enemyGold").innerHTML = "Enemy Gold: " + enemyGold;
                     }
                 }
             }
@@ -668,6 +676,8 @@ function checkProjectileCollisions() {
                     world.removeBody(playerShipData.shipBody);
                     spaceships.splice(spaceships.indexOf(playerShipData), 1); // Remove from array
                     logEvent("1 player " + playerShip.userData.unitMode + " ship defeated", false, false);
+                    enemyGold += 5; 
+                    document.getElementById("enemyGold").innerHTML = "Enemy Gold: " + enemyGold;
                 }
 
                 // Remove the projectile after hit
@@ -698,6 +708,8 @@ function checkPlayerProjectileCollisions() {
                     world.removeBody(shipData.enemyShipBody);
                     enemies.splice(enemies.indexOf(shipData), 1); // Remove from array
                     logEvent("1 enemy "+enemyShip.userData.EnemyType+" ship defeated", false, false);
+                    playerGold += 5;
+                    document.getElementById("playerGold").innerHTML = "Player Gold: " + playerGold;
                 }
 
                 // Remove the projectile after hit
@@ -832,5 +844,34 @@ function checkAndChangeEnemyToAggressive() {
                 break; // Change only one unit and exit the loop
             }
         }
+    }
+}
+
+// Button to auto place ships
+var autoPlaceButton = document.getElementById('autoPlaceButton');
+autoPlaceButton.addEventListener('click', () => {
+    autoPlaceShips();
+});
+
+// Function to auto place ships
+function autoPlaceShips() {
+    autoPlaceButton.disabled = true;
+    if (spaceships.length === 0 && !simulationActive) { // Only allow if no ships placed yet and simulation is not active
+        for (let i = 0; i < MAX_SHIPS; i++) {
+            // Generate random position within the allowable area
+            const randomX = (Math.random() * 600) - 300; // Random X position
+            const randomZ = (Math.random() * 600) - 300; // Random Z position
+            const randomY = 5; // Slightly above the surface or adjustable
+
+            const position = new THREE.Vector3(randomX, randomY, randomZ);
+            
+            // Randomly choose offensive or defensive mode
+            UNIT_MODE = Math.random() < 0.5 ? 'offence' : 'defence';
+
+            createSpaceship(position); // Create a spaceship at the random position
+        }
+        logEvent("All player ships have been auto placed.", true, true);
+    } else {
+        logEvent("You cannot auto place ships after the game has started or if ships are already placed.", true, true);
     }
 }
