@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls, GLTFLoader } from "addons";
 
 // the minimum distance away from teh gate a unit can be placed 
-const GATE_RADIUS = 800;
+const GATE_RADIUS = 200;
 // the maximum number of player ships allowed
 const MAX_SHIPS = 10;
 // the total enemy units to spawn 
@@ -22,7 +22,7 @@ const ENEMY_UNIT_HEALTH = 50;
 // Enemy Speed to gate 
 const ENEMY_SPEED = 0.5;
 // Player Unit Speed to gate 
-const PLAYER_SPEED = 0.1;
+const PLAYER_SPEED = 0.5;
 // player Gold 
 let playerGold = 0;
 // enemy gold
@@ -251,7 +251,6 @@ startBtn.addEventListener('click', async () => {
         // Set a velocity for the spaceship (adjust speed as desired)
         spaceship.userData.velocity = direction.multiplyScalar(0.5); // Speed multiplier to control movement
     }
-    logEvent("All offensive player ships now moving toward enemy gate.", true, true);
 });
 
 // Handle window resizing
@@ -308,7 +307,7 @@ function animate() {
                 const directionToEnemy = nearestEnemyShip.position.clone().sub(spaceship.position).normalize();
 
                 // Move player ship toward the nearest enemy ship
-                spaceship.position.add(directionToEnemy.multiplyScalar(PLAYER_SPEED));
+                spaceship.position.add(directionToEnemy.multiplyScalar(PLAYER_SPEED)); // Ensure PLAYER_SPEED is a small value
 
                 // Make the player ship face the nearest enemy ship
                 spaceship.lookAt(nearestEnemyShip.position);
@@ -325,7 +324,7 @@ function animate() {
                 const directionToPlayer = nearestPlayerShip.position.clone().sub(enemyShip.position).normalize();
 
                 // Move enemy ship toward the nearest player ship
-                enemyShip.position.add(directionToPlayer.multiplyScalar(ENEMY_SPEED));
+                enemyShip.position.add(directionToPlayer.multiplyScalar(ENEMY_SPEED)); // Ensure ENEMY_SPEED is appropriate
 
                 // Make the enemy ship face the nearest player ship
                 enemyShip.lookAt(nearestPlayerShip.position);
