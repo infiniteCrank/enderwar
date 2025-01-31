@@ -16,32 +16,22 @@
             cursor: pointer; 
             z-index: 100;
         }
-        #defenceButton {
-            position: absolute; 
-            top: 20px; 
-
-        }
-        #offenceButton {
-            position: absolute; 
-            top: 20px; 
-            left: 100px;
-        }
         #playerGold {
             position: absolute; 
             top: 20px; 
-            left: 220px;
+            left: 1%; 
             color: #FFFFFF;
         }
         #enemyGold {
             position: absolute; 
             top: 20px; 
-            left: 350px;
+            left: 10%; 
             color: #FFFFFF;
         }
         #waveNumber {
             position: absolute; 
             top: 20px; 
-            left: 500px;
+            left: 20%; 
             color: #FFFFFF;
         }
         .event-log {
@@ -77,23 +67,10 @@
             background-color: yellow;
             color: black;
         }
-        #autoPlaceButton { 
-            position: absolute; 
-            top: 20px; 
-            right: 20%; 
-            transform: translateX(-50%); 
-            padding: 10px 20px; 
-            font-size: 16px; 
-            cursor: pointer; 
-            z-index: 100;
-        }
     </style>
 </head>
 <body>
     <button id="startButton">Start</button>
-    <button id="defenceButton" >Defence Mode</button>
-    <button id="offenceButton" disabled>Offence Mode</button>
-    <button id="autoPlaceButton">Auto Place Ships</button>
     <div id="playerGold">Player Gold: 0</div>
     <div id="enemyGold">Enemy Gold: 0</div>
     <div id="waveNumber">Wave: 1</div>

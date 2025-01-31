@@ -29,6 +29,9 @@ let playerGold = 0;
 let enemyGold = 0;
 // wave number 
 let waveNumber = 1;
+// Starting health for gates
+const PLAYER_GATE_HEALTH = 100;
+const ENEMY_GATE_HEALTH = 100;
 
 // Initialize Three.js
 const scene = new THREE.Scene();
@@ -76,6 +79,7 @@ const gateGeometry = new THREE.BoxGeometry(100, 200, 100); // 20 x 40 x 20 gate
 const gateMaterial = new THREE.MeshPhongMaterial({ color: 0xff0000 }); // Red material for gate
 const enemyGate = new THREE.Mesh(gateGeometry, gateMaterial);
 enemyGate.position.set(0, -500, 0); // Position the gate at the south pole
+enemyGate.userData = { health: ENEMY_GATE_HEALTH }; // Add health property
 scene.add(enemyGate);
 logEvent("create enemy gate.", false, false);
 
@@ -84,6 +88,7 @@ const playerGateGeometry = new THREE.BoxGeometry(100, 200, 100); // Size of the 
 const playerGateMaterial = new THREE.MeshPhongMaterial({ color: 0x0000ff }); // Blue material for player gate
 const playerGate = new THREE.Mesh(playerGateGeometry, playerGateMaterial);
 playerGate.position.set(0, 500, 0); // Position the player gate at the north pole
+playerGate.userData = { health: PLAYER_GATE_HEALTH }; // Add health property
 scene.add(playerGate);
 logEvent("Create player gate.", false, false);
 
@@ -122,9 +127,9 @@ function createSpaceship(position) {
             health: PLAYER_UNIT_HEALTH, // Set initial health to PLAYER_UNIT_HEALTH
             velocity: new THREE.Vector3(0, 0, 0),
             playerShip: true,
-            unitMode: UNIT_MODE
+
         };
-        logEvent("You placed a " + UNIT_MODE + " unit at X:" + position.x + " Y:" + position.y + 100 + " Z:" + position.z + " with " + PLAYER_UNIT_HEALTH + " health.", false, false);
+        logEvent("You placed a unit at X:" + position.x + " Y:" + position.y + 100 + " Z:" + position.z + " with " + PLAYER_UNIT_HEALTH + " health.", false, false);
         spaceships.push({ spaceship, shipBody });
     });
 }
@@ -170,8 +175,6 @@ window.addEventListener('click', (event) => {
     );
     // if the user is click start button ignore
     if (event.target.id === "startButton" || 
-        event.target.id === "defenceButton" || 
-        event.target.id === "offenceButton" ||
         event.target.id === "eventLog" ||
         event.target.id === "toggleButton" ||
         event.target.classList.contains("noClick")
@@ -221,27 +224,6 @@ window.addEventListener('click', (event) => {
         }
     }
 });
-
-// this is the player unit mode when placing units 
-let UNIT_MODE = 'offence'
-// button to set defence mode 
-var dendenceBtn = document.getElementById('defenceButton');
-dendenceBtn.addEventListener('click', () => {
-    dendenceBtn.disabled = true
-    offenceBtn.disabled = false
-     UNIT_MODE = 'defence'
-     logEvent("Defence Enabled.", true, true);
-});
-
-// button to set offence mode 
-var offenceBtn = document.getElementById('offenceButton');
-offenceBtn.addEventListener('click', () => {
-    offenceBtn.disabled = true
-    dendenceBtn.disabled = false
-    UNIT_MODE = 'offence'
-    logEvent("Offence Enabled.", true, true);
-});
-
 
 // Movement towards enemy gate on start button click
 let simulationActive = false;
@@ -309,8 +291,6 @@ function animate() {
             return;
         }
 
-        // Check if we need to convert a defensive enemy to aggressive
-        checkAndChangeEnemyToAggressive()
 
         // Update projectiles
         updateProjectiles();
@@ -336,35 +316,14 @@ function animate() {
                 spaceship.lookAt(lookAtTarget);
             }
 
-            if (spaceship.userData && spaceship.userData.velocity && spaceship.userData.unitMode === 'offence') {
+            if (spaceship.userData && spaceship.userData.velocity) {
                 spaceship.position.add(spaceship.userData.velocity);
 
-
-                // Check for collision with obstacles
-                scene.children.forEach((child) => {
-                    if (child instanceof THREE.Mesh && child !== spaceSphere && 
-                        child !== playerGate && child !== enemyGate) {
-                        
-                        if (checkCollision(spaceship, child)) {
-                            // If a collision is detected, redirect the ship
-                            steerAroundObstacle(spaceship, child);
-                        }
-                    }
-                });
                 // Continue movement towards the gates after steering
                 const gatePosition = enemyGate.position.clone();
                 const directionToGate = gatePosition.clone().sub(spaceship.position).normalize();
                 spaceship.userData.velocity.add(directionToGate.multiplyScalar(PLAYER_SPEED)); // Adjust speed for a smoother approach
                 spaceship.userData.velocity.normalize(); // Normalize to keep consistent speed
-            }
-
-            // Collision check with the enemy gate
-            if (checkCollision(spaceship, enemyGate)) {
-                logEvent("You win!", true, true);
-                waveNumber ++;
-                document.getElementById('waveNumber').innerHTML="Wave: " + waveNumber;
-                resetGame();
-                return;
             }
         }
 
@@ -382,33 +341,16 @@ function animate() {
                 enemyShip.lookAt(lookAtTarget);
             }
 
-            if (enemyShip.userData && enemyShip.userData.velocity && enemyShip.userData.EnemyType === 'aggressive') {
+            if (enemyShip.userData && enemyShip.userData.velocity) {
                 enemyShip.position.add(enemyShip.userData.velocity);
 
-                // Check for collision with obstacles
-                scene.children.forEach((child) => {
-                    if (child instanceof THREE.Mesh && child !== spaceSphere && 
-                        child !== playerGate && child !== enemyGate) {
-                        
-                        if (checkCollision(enemyShip, child)) {
-                            // If a collision is detected, redirect the ship
-                            steerAroundObstacle(enemyShip, child);
-                        }
-                    }
-                });
-                // Continue movement towards the gates after steering
+                // Continue movement towards the gates 
                 const gatePosition = playerGate.position.clone();
                 const directionToGate = gatePosition.clone().sub(enemyShip.position).normalize();
                 enemyShip.userData.velocity.add(directionToGate.multiplyScalar(0.1)); // Adjust speed for a smoother approach
                 enemyShip.userData.velocity.normalize(); // Normalize to keep consistent speed
             }
 
-            // Check for enemy ship collisions with the player gate
-            if (checkCollision(enemyShip, playerGate)) {
-                logEvent("You lose.",true, true);
-                resetGame();
-                return;
-            }
         }
 
         //Collision handling for player and enemy ships both ships should get destroyed 
@@ -486,7 +428,6 @@ function resetGame() {
       enemies = [];
       simulationActive = false
       startBtn.disabled = false
-      spawnObstacles(10)
     
 }
 
@@ -504,28 +445,17 @@ async function spawnEnemyShips() {
 
     while (spawnedEnemies < enemyCount) {
 
-        const enemyType = Math.random() < 0.5 ? 'defensive' : 'aggressive'; // Randomly choose enemy type
-        logEvent("AI choose " + enemyType + " for the next unit.", false, false)
-        let enemyShipPosition
-        if(enemyType ==="aggressive"){// aggressive types stay on the outside edge 
-            // Generate random positions within the sphere radius
-            const radius = 300; // Size of your space sphere
-            const randomAngle = Math.random() * Math.PI * 2; // Angle for spherical coordinates
-            const randomHeight = Math.random() * radius; // Height from the center to the sphere surface
-            // Convert spherical coordinates to Cartesian to ensure the position is within the sphere
-            const x = Math.cos(randomAngle) * Math.sqrt(radius * radius - randomHeight * randomHeight);
-            const y = randomHeight - 300; // Adjust Y relative to your setup to ensure spawning within the sphere height
-            const z = Math.sin(randomAngle) * Math.sqrt(radius * radius - randomHeight * randomHeight);
+        // Generate random positions within the sphere radius
+        const radius = 300; // Size of your space sphere
+        const randomAngle = Math.random() * Math.PI * 2; // Angle for spherical coordinates
+        const randomHeight = Math.random() * radius; // Height from the center to the sphere surface
+        // Convert spherical coordinates to Cartesian to ensure the position is within the sphere
+        const x = Math.cos(randomAngle) * Math.sqrt(radius * radius - randomHeight * randomHeight);
+        const y = randomHeight - 300; // Adjust Y relative to your setup to ensure spawning within the sphere height
+        const z = Math.sin(randomAngle) * Math.sqrt(radius * radius - randomHeight * randomHeight);
 
-            enemyShipPosition = new THREE.Vector3(x, y, z); // Create position vector
-        }else{ // defence stays in the middle 
-            // Random positions to spawn within a certain range
-            const randomX = (Math.random() * 600) - 300  // Random X position
-            const randomZ = (Math.random() * 600) - 300  // Random Z position
-            enemyShipPosition = new THREE.Vector3(randomX, -300, randomZ); // near enemy gate 
-        }
-        
-
+        let enemyShipPosition = new THREE.Vector3(x, y, z); // Create position vector
+    
         // Calculate and check distance to player gate
         const distanceToGate = enemyShipPosition.distanceTo(playerGate.position);
 
@@ -537,7 +467,6 @@ async function spawnEnemyShips() {
             directionToGate = playerGate.position.clone().sub(enemyShip.position).normalize();
             // Set enemy ship's moving velocity in userData for future updates
             enemyShip.userData.velocity = directionToGate.multiplyScalar(ENEMY_SPEED); // Adjust speed as desired
-            enemyShip.userData.EnemyType = enemyType;
             
             spawnedEnemies++; // Increment the count of spawned enemies
         } 
@@ -679,7 +608,7 @@ function checkProjectileCollisions() {
                     scene.remove(playerShip);
                     world.removeBody(playerShipData.shipBody);
                     spaceships.splice(spaceships.indexOf(playerShipData), 1); // Remove from array
-                    logEvent("1 player " + playerShip.userData.unitMode + " ship defeated", false, false);
+                    logEvent("1 player ship defeated", false, false);
                     enemyGold += 5; 
                     document.getElementById("enemyGold").innerHTML = "Enemy Gold: " + enemyGold;
                 }
@@ -692,6 +621,23 @@ function checkProjectileCollisions() {
 
                 return; // Exit the loop once a hit is processed
             }
+        }
+                // Also check for collisions with the player gate
+        if (checkCollision(projectile, playerGate) && playerGate.userData.health >0 ) {
+            playerGate.userData.health -= 1; // Reduce gate health
+            logEvent("Enemy projectile hit the player gate. Remaining health: " + playerGate.userData.health, false, false);
+            if (playerGate.userData.health === 0) {
+                scene.remove(playerGate);
+                logEvent("Player gate destroyed.", true, true);
+            }
+
+            // Remove the projectile after hitting the gate
+            scene.remove(projectile);
+            projectile.geometry.dispose();
+            projectile.material.dispose();
+            projectiles.splice(projectileIndex, 1); // Remove from the projectile array
+
+            return; // Exit the loop once a hit is processed
         }
     })
 }
@@ -711,7 +657,7 @@ function checkPlayerProjectileCollisions() {
                     scene.remove(enemyShip);
                     world.removeBody(shipData.enemyShipBody);
                     enemies.splice(enemies.indexOf(shipData), 1); // Remove from array
-                    logEvent("1 enemy "+enemyShip.userData.EnemyType+" ship defeated", false, false);
+                    logEvent("1 enemy ship defeated", false, false);
                     playerGold += 5;
                     document.getElementById("playerGold").innerHTML = "Player Gold: " + playerGold;
                 }
@@ -724,56 +670,26 @@ function checkPlayerProjectileCollisions() {
 
                 return; // Exit the loop once a hit is processed
             }
+
+            // Also check for collisions with the enemy gate
+            if (checkCollision(playerProjectile, enemyGate) && enemyGate.userData.health > 0) {
+                enemyGate.userData.health -= 1; // Reduce gate health
+                logEvent("Player projectile hit the enemy gate. Remaining health: " + enemyGate.userData.health, false, false);
+                if (enemyGate.userData.health === 0) {
+                    scene.remove(enemyGate);
+                    logEvent("Enemy gate destroyed.", true, true);
+                }
+
+                // Remove the projectile after hitting the gate
+                scene.remove(playerProjectile);
+                playerProjectile.geometry.dispose();
+                playerProjectile.material.dispose();
+                playerProjectiles.splice(projectileIndex, 1); // Remove from the projectile array
+
+                return; // Exit the loop once a hit is processed
+            }
         }
     });
-}
-
-// Function to create obstacles using a GLB model
-function createObstacle(position) {
-    loader.load('meteor.glb', (gltf) => {
-        const obstacle = gltf.scene; // Use the loaded scene from glTF
-        obstacle.position.copy(position);
-        obstacle.scale.set(20, 20, 20); // Adjust the scale if necessary
-        scene.add(obstacle);
-
-        const obstacleShape = new CANNON.Box(new CANNON.Vec3(25, 25, 25)); // Adjust size as needed
-        const obstacleBody = new CANNON.Body({ mass: 0 }); // Static obstacle
-        obstacleBody.addShape(obstacleShape);
-        obstacleBody.position.copy(position);
-        world.addBody(obstacleBody);
-    }, undefined, (error) => {
-        console.error("An error occurred while loading the obstacle model: ", error);
-    });
-}
-
-// Function to spawn obstacles
-async function spawnObstacles(count) {
-    for (let i = 0; i < count; i++) {
-        const randomX = (Math.random() - 0.5) * 800; // Adjust range
-        const randomY = (Math.random() - 0.5) * 800; // Adjust range
-        const randomZ = (Math.random() - 0.5) * 800; // Adjust range
-        const position = new THREE.Vector3(randomX, randomY, randomZ);
-        
-        // Ensure obstacles are not within a certain distance of the gates or other obstacles
-        const distanceToPlayerGate = position.distanceTo(playerGate.position);
-        const distanceToEnemyGate = position.distanceTo(enemyGate.position);
-
-        if (distanceToPlayerGate > 200 && distanceToEnemyGate > 200) {
-            await createObstacle(position);
-        }
-    }
-}
-spawnObstacles(10); // Adjust the number of obstacles
-
-function steerAroundObstacle(spaceship, obstacle) {
-    const obstaclePosition = obstacle.position.clone();
-    const directionToObstacle = obstaclePosition.clone().sub(spaceship.position).normalize();
-
-    // Calculate a direction perpendicular to the obstacle
-    const perpendicularDirection = new THREE.Vector3(-directionToObstacle.z, 0, directionToObstacle.x);
-    
-    // Adjust the spaceship's velocity to move around the obstacle
-    spaceship.userData.velocity = perpendicularDirection.multiplyScalar(0.5); // Adjust speed as needed
 }
 
 const logElement = document.getElementById('eventLog');
@@ -829,53 +745,3 @@ const logList = document.getElementById('logList');
 toggleButton.addEventListener('click', () => {
     logList.classList.toggle('hidden'); // Toggle the hidden class
 });
-
-// Function to check if there are any aggressive enemies left
-function checkAndChangeEnemyToAggressive() {
-    let aggressiveCount = 0;
-    for (const enemy of enemies) {
-        if (enemy.enemyShip.userData.EnemyType === 'aggressive') {
-            aggressiveCount++;
-        }
-    }
-
-    // If no aggressive units left, change one defensive unit to aggressive
-    if (aggressiveCount === 0) {
-        for (const enemy of enemies) {
-            if (enemy.enemyShip.userData.EnemyType === 'defensive') {
-                enemy.enemyShip.userData.EnemyType = 'aggressive'; // Change defensive to aggressive
-                logEvent("One enemy ship changed from defensive to aggressive.", true, false);
-                break; // Change only one unit and exit the loop
-            }
-        }
-    }
-}
-
-// Button to auto place ships
-var autoPlaceButton = document.getElementById('autoPlaceButton');
-autoPlaceButton.addEventListener('click', () => {
-    autoPlaceShips();
-});
-
-// Function to auto place ships
-function autoPlaceShips() {
-    autoPlaceButton.disabled = true;
-    if (spaceships.length === 0 && !simulationActive) { // Only allow if no ships placed yet and simulation is not active
-        for (let i = 0; i < MAX_SHIPS; i++) {
-            // Generate random position within the allowable area
-            const randomX = (Math.random() * 600) - 300; // Random X position
-            const randomZ = (Math.random() * 600) - 300; // Random Z position
-            const randomY = 5; // Slightly above the surface or adjustable
-
-            const position = new THREE.Vector3(randomX, randomY, randomZ);
-            
-            // Randomly choose offensive or defensive mode
-            UNIT_MODE = Math.random() < 0.5 ? 'offence' : 'defence';
-
-            createSpaceship(position); // Create a spaceship at the random position
-        }
-        logEvent("All player ships have been auto placed.", true, true);
-    } else {
-        logEvent("You cannot auto place ships after the game has started or if ships are already placed.", true, true);
-    }
-}
