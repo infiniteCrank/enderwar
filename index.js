@@ -32,6 +32,8 @@ let waveNumber = 1;
 // Starting health for gates
 const PLAYER_GATE_HEALTH = 100;
 const ENEMY_GATE_HEALTH = 100;
+// Minimum distance to maintain between allied ships
+const MIN_DISTANCE = 50; // Adjust this value as necessary
 
 // Initialize Three.js
 const scene = new THREE.Scene();
@@ -269,118 +271,71 @@ function animate() {
     requestAnimationFrame(animate);
 
     if (simulationActive) {
-
-        //check for a draw 
-        if(spaceships.length === 0 && enemies.length === 0){
+        // Check for game ending conditions
+        if (spaceships.length === 0 && enemies.length === 0) {
             logEvent("This was a draw.", true, true);
             resetGame();
             return;
         }
-        //check for defensive win 
-        if(spaceships.length > 0 && enemies.length === 0){
+        if (spaceships.length > 0 && enemies.length === 0) {
             logEvent("You win!", true, true);
             resetGame();
-            waveNumber ++;
-            document.getElementById('waveNumber').innerHTML="Wave: " + waveNumber;
+            waveNumber++;
+            document.getElementById('waveNumber').innerHTML = "Wave: " + waveNumber;
             return;
         }
-        // if you ever have no ships and the other player does you lose 
-        if(spaceships.length === 0 && enemies.length > 0){
+        if (spaceships.length === 0 && enemies.length > 0) {
             logEvent("You lose.", true, true);
             resetGame();
             return;
         }
 
-
         // Update projectiles
         updateProjectiles();
         updatePlayerProjectiles();
 
-        // Check for projectile collisions with player ships
+        // Check for projectile collisions
         checkPlayerProjectileCollisions();
         checkProjectileCollisions();
-        
 
-        // Update positions and physics
+        // Movement logic for player ships
         for (const spaceshipData of spaceships) {
-
             const spaceship = spaceshipData.spaceship;
 
-            // Get the nearest player ship
-            const nearestEnemyrShip = getNearestEnemyShip(spaceship.position);
-            
-            if (nearestEnemyrShip) {
-                const directionToPlayer = nearestEnemyrShip.position.clone().sub(spaceship.position).normalize();
-                // Calculate the rotation angle
-                const lookAtTarget = new THREE.Vector3().addVectors(spaceship.position, directionToPlayer);
-                spaceship.lookAt(lookAtTarget);
-            }
+            // Get the nearest enemy ship
+            const nearestEnemyShip = getNearestEnemyShip(spaceship.position);
+            if (nearestEnemyShip) {
+                const directionToEnemy = nearestEnemyShip.position.clone().sub(spaceship.position).normalize();
 
-            if (spaceship.userData && spaceship.userData.velocity) {
-                spaceship.position.add(spaceship.userData.velocity);
+                // Move player ship toward the nearest enemy ship
+                spaceship.position.add(directionToEnemy.multiplyScalar(PLAYER_SPEED));
 
-                // Continue movement towards the gates after steering
-                const gatePosition = enemyGate.position.clone();
-                const directionToGate = gatePosition.clone().sub(spaceship.position).normalize();
-                spaceship.userData.velocity.add(directionToGate.multiplyScalar(PLAYER_SPEED)); // Adjust speed for a smoother approach
-                spaceship.userData.velocity.normalize(); // Normalize to keep consistent speed
+                // Make the player ship face the nearest enemy ship
+                spaceship.lookAt(nearestEnemyShip.position);
             }
         }
 
+        // Movement logic for enemy ships
         for (const enemyData of enemies) {
-
             const enemyShip = enemyData.enemyShip;
 
             // Get the nearest player ship
             const nearestPlayerShip = getNearestPlayerShip(enemyShip.position);
-            
             if (nearestPlayerShip) {
                 const directionToPlayer = nearestPlayerShip.position.clone().sub(enemyShip.position).normalize();
-                // Calculate the rotation angle
-                const lookAtTarget = new THREE.Vector3().addVectors(enemyShip.position, directionToPlayer);
-                enemyShip.lookAt(lookAtTarget);
-            }
 
-            if (enemyShip.userData && enemyShip.userData.velocity) {
-                enemyShip.position.add(enemyShip.userData.velocity);
+                // Move enemy ship toward the nearest player ship
+                enemyShip.position.add(directionToPlayer.multiplyScalar(ENEMY_SPEED));
 
-                // Continue movement towards the gates 
-                const gatePosition = playerGate.position.clone();
-                const directionToGate = gatePosition.clone().sub(enemyShip.position).normalize();
-                enemyShip.userData.velocity.add(directionToGate.multiplyScalar(0.1)); // Adjust speed for a smoother approach
-                enemyShip.userData.velocity.normalize(); // Normalize to keep consistent speed
-            }
-
-        }
-
-        //Collision handling for player and enemy ships both ships should get destroyed 
-        for (const playerShip of spaceships) {
-            for (const enemyShip of enemies) {
-                if (checkCollision(playerShip.spaceship, enemyShip.enemyShip)) {
-                    enemyShip.enemyShip.userData.health -= 1; // Enemy takes damage
-                    if (enemyShip.enemyShip.userData.health <= 0) {
-                        scene.remove(playerShip.spaceship);
-                        world.removeBody(playerShip.shipBody);
-                        spaceships.splice(spaceships.indexOf(playerShip), 1); // Remove player ship from array
-
-                        scene.remove(enemyShip.enemyShip);
-                        world.removeBody(enemyShip.enemyShipBody);
-                        enemies.splice(enemies.indexOf(enemyShip), 1); // Remove enemy ship from array
-
-                        logEvent("A player and enemy ship have crashed.", false, false);
-                        playerGold += 5;
-                        enemyGold += 5;
-                        document.getElementById("playerGold").innerHTML = "Player Gold: " + playerGold;
-                        document.getElementById("enemyGold").innerHTML = "Enemy Gold: " + enemyGold;
-                    }
-                }
+                // Make the enemy ship face the nearest player ship
+                enemyShip.lookAt(nearestPlayerShip.position);
             }
         }
     }
 
     // Step the physics world
     world.step(1 / 60);
-    // Render scene
+    // Render the scene
     renderer.render(scene, camera);
 }
 animate();
